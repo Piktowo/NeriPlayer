@@ -52,6 +52,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -86,6 +87,8 @@ import androidx.compose.ui.unit.sp
 import moe.ouom.neriplayer.util.NPLogger
 import kotlin.math.abs
 import kotlin.math.floor
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 @Stable
 data class LyricVisualSpec(
@@ -229,10 +232,12 @@ fun AppleMusicLyric(
         }
     }
 
-    LaunchedEffect(listState.isScrollInProgress) {
-        if (listState.isScrollInProgress && !isAutoScrolling) {
-            isUserScrolling = true
-        }
+    // 去抖滚动状态，避免边界抖动触发闪烁
+    LaunchedEffect(listState, isAutoScrolling) {
+        snapshotFlow { listState.isScrollInProgress && !isAutoScrolling }
+            .debounce(180)
+            .distinctUntilChanged()
+            .collect { stable -> isUserScrolling = stable }
     }
 
     BoxWithConstraints(
@@ -240,7 +245,7 @@ fun AppleMusicLyric(
         contentAlignment = Alignment.Center
     ) {
         val centerPad = maxHeight / 2.5f
-        val maxTextWidth = maxWidth - 48.dp
+        val maxTextWidth = (maxWidth - 48.dp).coerceAtLeast(0.dp)
         val density = LocalDensity.current
 
         LazyColumn(
@@ -254,7 +259,7 @@ fun AppleMusicLyric(
             itemsIndexed(lyrics) { index, line ->
                 Crossfade(
                     targetState = isUserScrolling,
-                    animationSpec = tween(1000),
+                    animationSpec = tween(240),
                     label = "lyric_mode_fade"
                 ) { isScrolling ->
                     if (isScrolling) {

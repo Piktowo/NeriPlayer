@@ -1205,21 +1205,42 @@ fun SettingsScreen(
             }
 
             // GitHub
+              item {
+                  ListItem(
+                      leadingContent = {
+                          Icon(
+                              painter = painterResource(id = R.drawable.ic_github),
+                              contentDescription = "GitHub (cwuom)",
+                              tint = MaterialTheme.colorScheme.onSurface
+                          )
+                      },
+                      headlineContent = { Text("GitHub (原作者)") },
+                      supportingContent = { Text("github.com/cwuom/NeriPlayer") },
+                      modifier = Modifier.clickable {
+                          val intent = Intent(
+                              Intent.ACTION_VIEW,
+                              "https://github.com/cwuom/NeriPlayer".toUri()
+                          )
+                          context.startActivity(intent)
+                      },
+                      colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                  )
+              }
             item {
                 ListItem(
                     leadingContent = {
                         Icon(
                             painter = painterResource(id = R.drawable.ic_github),
-                            contentDescription = "GitHub",
+                            contentDescription = "GitHub(Piktowo)",
                             tint = MaterialTheme.colorScheme.onSurface
                         )
                     },
-                    headlineContent = { Text("GitHub") },
-                    supportingContent = { Text("github.com/cwuom/NeriPlayer") },
+                    headlineContent = { Text("GitHub(维护者)") },
+                    supportingContent = { Text("github.com/Piktowo/NeriPlayer") },
                     modifier = Modifier.clickable {
                         val intent = Intent(
                             Intent.ACTION_VIEW,
-                            "https://github.com/cwuom/NeriPlayer".toUri()
+                            "https://github.com/Piktowo/NeriPlayer".toUri()
                         )
                         context.startActivity(intent)
                     },

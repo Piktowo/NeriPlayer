@@ -43,6 +43,9 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Home
@@ -233,6 +236,7 @@ fun NeriApp(
 
                 CompositionLocalProvider(LocalMiniPlayerHeight provides miniPlayerHeightDp) {
                     Scaffold(
+    contentWindowInsets = WindowInsets.safeDrawing,
                         containerColor = containerColor,
                         contentColor = MaterialTheme.colorScheme.onSurface,
                         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -270,12 +274,11 @@ fun NeriApp(
                             }
                         }
                     ) { innerPadding ->
-                        Box(modifier = Modifier
-                            .padding(
-                                bottom = innerPadding.calculateBottomPadding()-1.dp,
-                                top = innerPadding.calculateTopPadding()
-                            )
-                        ) {
+    Box(
+        modifier = Modifier
+            .padding(innerPadding)
+            .consumeWindowInsets(innerPadding)
+    ) {
                             NavHost(
                                 navController = navController,
                                 startDestination = Destinations.Home.route,

@@ -249,6 +249,9 @@ fun DownloadManagerScreen(
         // 多选优先退出
         BackHandler(enabled = selectionMode) { exitSelectionMode() }
 
+        // 进行中的下载任务
+        OngoingDownloadTasks(viewModel = viewModel)
+
         // 已下载歌曲列表
         DownloadedSongsList(
             viewModel = viewModel,
@@ -568,5 +571,74 @@ private fun DownloadedSongItem(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun OngoingDownloadTasks(viewModel: moe.ouom.neriplayer.ui.viewmodel.DownloadManagerViewModel) {
+    val tasks by viewModel.downloadTasks.collectAsState()
+    if (tasks.isEmpty()) return
+
+    Text(
+        text = "进行中",
+        style = MaterialTheme.typography.titleMedium,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+    )
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+    ) {
+        tasks.forEach { task ->
+            val p = task.progress
+            val ratio = if (p != null && p.totalBytes > 0L) {
+                (p.bytesRead.toFloat() / p.totalBytes.toFloat()).coerceIn(0f, 1f)
+            } else null
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 6.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            ) {
+                Column(Modifier.padding(12.dp)) {
+                    Text(
+                        text = "${task.song.artist} - ${task.song.name}",
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    if (ratio != null) {
+                        LinearProgressIndicator(progress = ratio, modifier = Modifier.fillMaxWidth())
+                        Spacer(Modifier.height(4.dp))
+                        val percent = (ratio * 100).toInt()
+                        val read = formatSize(task.progress!!.bytesRead)
+                        val total = formatSize(task.progress!!.totalBytes)
+                        Text("$percent%  ·  $read / $total", style = MaterialTheme.typography.bodySmall)
+                    } else {
+                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                        Spacer(Modifier.height(4.dp))
+                        Text("准备中…", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+        }
+    }
+
+    Spacer(Modifier.height(12.dp))
+}
+
+private fun formatSize(bytes: Long): String {
+    val kb = 1024.0
+    val mb = kb * 1024
+    val gb = mb * 1024
+    return when {
+        bytes >= gb -> String.format("%.1f GB", bytes / gb)
+        bytes >= mb -> String.format("%.1f MB", bytes / mb)
+        bytes >= kb -> String.format("%.1f KB", bytes / kb)
+        else -> "${bytes} B"
     }
 }

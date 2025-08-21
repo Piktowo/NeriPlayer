@@ -12,6 +12,7 @@ class DownloadManagerViewModel(application: Application) : AndroidViewModel(appl
     // 直接暴露GlobalDownloadManager的状态
     val downloadedSongs = GlobalDownloadManager.downloadedSongs
     val isRefreshing = GlobalDownloadManager.isRefreshing
+    val downloadTasks = GlobalDownloadManager.downloadTasks
     
     fun refreshDownloadedSongs() {
         val appContext = getApplication<Application>()

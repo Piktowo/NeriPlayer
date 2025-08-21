@@ -118,6 +118,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import moe.ouom.neriplayer.core.download.GlobalDownloadManager
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -795,7 +796,7 @@ private fun MoreOptionsSheet(
                                 leadingContent = { Icon(Icons.Outlined.Download, null) },
                                 modifier = Modifier.clickable {
                                     coroutineScope.launch {
-                                        AudioDownloadManager.downloadSong(context, originalSong)
+                                        GlobalDownloadManager.startDownload(context, originalSong) { msg -> coroutineScope.launch { snackbarHostState.showSnackbar(msg) } }
                                         snackbarHostState.showSnackbar("开始下载：${originalSong.name}")
                                     }
                                     onDismiss()

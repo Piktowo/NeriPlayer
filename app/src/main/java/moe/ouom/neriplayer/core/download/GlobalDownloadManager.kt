@@ -344,7 +344,7 @@ object GlobalDownloadManager {
     /**
      * 开始下载单首歌曲
      */
-    fun startDownload(context: Context, song: SongItem) {
+    fun startDownload(context: Context, song: SongItem, onError: ((String) -> Unit)? = null) {
         scope.launch {
             try {
                 // 添加下载任务
@@ -357,6 +357,7 @@ object GlobalDownloadManager {
             } catch (e: Exception) {
                 NPLogger.e("GlobalDownloadManager", "开始下载失败: ${e.message}")
                 updateTaskStatus(song.id, DownloadStatus.FAILED)
+                onError?.invoke("下载失败：${song.name}")
             }
         }
     }
@@ -364,7 +365,7 @@ object GlobalDownloadManager {
     /**
      * 开始批量下载
      */
-    fun startBatchDownload(context: Context, songs: List<SongItem>, onBatchComplete: () -> Unit = {}) {
+    fun startBatchDownload(context: Context, songs: List<SongItem>, onError: ((String) -> Unit)? = null, onBatchComplete: () -> Unit = {}) {
         if (songs.isEmpty()) return
         
         scope.launch {
@@ -382,6 +383,7 @@ object GlobalDownloadManager {
                 NPLogger.e("GlobalDownloadManager", "批量下载失败: ${e.message}")
                 songs.forEach { song ->
                     updateTaskStatus(song.id, DownloadStatus.FAILED)
+                onError?.invoke("下载失败：${song.name}")
                 }
             }
         }
