@@ -67,48 +67,46 @@ jobs:
           compression-level: 9
           retention-days: 7
 
-      - name: Telegram Notify (file upload + buttons)
+      - name: Telegram 推送（文件+按钮，带前置校验与详细日志）
         if: ${{ success() }}
         env:
           TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          CAPTION: ${{ github.repository }} | ${{ github.ref_name }} | ${{ github.sha }}
           ZIP_PATH: ${{ steps.pack.outputs.zip_path }}
           APK_PATH: ${{ steps.pack.outputs.apk_path }}
-          RUN_ID: ${{ github.run_id }}
+          SHA: ${{ github.sha }}
           REPO: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
+          RUN_ID: ${{ github.run_id }}
+        shell: bash
         run: |
           set -euo pipefail
           API="https://api.telegram.org/bot${TOKEN}"
-          caption="${CAPTION}"
-          sent=0
+          SHORT_SHA="${SHA:0:8}"
+          RUN_URL="https://github.com/${REPO}/actions/runs/${RUN_ID}"
+          ARTIFACT_URL="${RUN_URL}#artifacts"
+          echo "ZIP_PATH=${ZIP_PATH:-<empty>}"
+          echo "APK_PATH=${APK_PATH:-<empty>}"
+          [ -n "${TOKEN:-}" ] || { echo "ERROR: TELEGRAM_TOKEN is empty"; exit 1; }
+          [ -n "${CHAT_ID:-}" ] || { echo "ERROR: TELEGRAM_CHAT_ID is empty"; exit 1; }
           if [ -n "${ZIP_PATH:-}" ] && [ -f "${ZIP_PATH}" ]; then
-            curl -sS --fail-with-body -F chat_id="${CHAT_ID}" -F "caption=${caption}" -F "document=@${ZIP_PATH};type=application/zip" "${API}/sendDocument" >/dev/null && sent=1
+            sz=$(stat -c%s "${ZIP_PATH}" || echo 0)
+            echo "Sending ZIP (${sz} bytes)"
+            resp=$(curl -sS --fail-with-body               -F chat_id="${CHAT_ID}"               -F parse_mode=HTML               -F "caption=🚀 NeriPlayer ${SHORT_SHA}"               -F "document=@${ZIP_PATH};type=application/zip;filename=app-apk.zip"               "${API}/sendDocument") || { echo "Telegram sendDocument ZIP failed:"; echo "${resp}"; exit 1; }
           elif [ -n "${APK_PATH:-}" ] && [ -f "${APK_PATH}" ]; then
-            curl -sS --fail-with-body -F chat_id="${CHAT_ID}" -F "caption=${caption}" -F "document=@${APK_PATH};type=application/vnd.android.package-archive" "${API}/sendDocument" >/dev/null && sent=1
+            sz=$(stat -c%s "${APK_PATH}" || echo 0)
+            echo "Sending APK (${sz} bytes)"
+            resp=$(curl -sS --fail-with-body               -F chat_id="${CHAT_ID}"               -F parse_mode=HTML               -F "caption=🚀 NeriPlayer ${SHORT_SHA}"               -F "document=@${APK_PATH};type=application/vnd.android.package-archive;filename=NeriPlayer-${SHORT_SHA}.apk"               "${API}/sendDocument") || { echo "Telegram sendDocument APK failed:"; echo "${resp}"; exit 1; }
+          else
+            echo "ERROR: Neither ZIP_PATH nor APK_PATH exists."
+            ls -l "${ZIP_PATH:-/dev/null}" 2>/dev/null || true
+            ls -l "${APK_PATH:-/dev/null}" 2>/dev/null || true
+            exit 1
           fi
-          if [ $sent -eq 1 ]; then
-            artifact_url="https://github.com/${REPO}/actions/runs/${RUN_ID}#artifacts"
-            run_url="https://github.com/${REPO}/actions/runs/${RUN_ID}"
-            if command -v jq >/dev/null 2>&1; then
-              btn_payload=$(jq -n --arg art "$artifact_url" --arg run "$run_url" '{inline_keyboard:[[{"text":"⬇️ 下载产物","url":$art},{"text":"🔗 查看构建","url":$run}]]}')
-            else
-              btn_payload='{"inline_keyboard":[[{"text":"⬇️ 下载产物","url":"'"$artifact_url"'"},{"text":"🔗 查看构建","url":"'"$run_url"'"}]]}'
-            fi
-            curl -sS --fail-with-body -X POST "${API}/sendMessage" -d chat_id="${CHAT_ID}" -d text="📦 构建产物与运行信息" -d parse_mode="HTML" -d reply_markup="$btn_payload" >/dev/null
+          if command -v jq >/dev/null 2>&1; then
+            REPLY_MARKUP=$(jq -n --arg a "$ARTIFACT_URL" --arg r "$RUN_URL" '{inline_keyboard:[[{"text":"⬇️ 下载产物","url":$a},{"text":"🔗 查看构建","url":$r}]]}')
+          else
+            REPLY_MARKUP='{"inline_keyboard":[[{"text":"⬇️ 下载产物","url":"'"$ARTIFACT_URL"'"},{"text":"🔗 查看构建","url":"'"$RUN_URL"'"}]]}'
           fi
-
-      - name: Telegram Notify (failure)
-        if: ${{ failure() }}
-        env:
-          TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-          CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          REPO: ${{ github.repository }}
-          BRANCH: ${{ github.ref_name }}
-          ACTOR: ${{ github.actor }}
-          RUN_ID: ${{ github.run_id }}
-        run: |
-          set -euo pipefail
-          nl=$'\n'
-          msg="❌ 构建失败${nl}📦 仓库: ${REPO}${nl}🌿 分支: ${BRANCH}${nl}🧑‍💻 提交者: ${ACTOR}${nl}🔗 https://github.com/${REPO}/actions/runs/${RUN_ID}"
-          curl -sS --fail-with-body -X POST "https://api.telegram.org/bot${TOKEN}/sendMessage" -d chat_id="${CHAT_ID}" -d text="${msg}"
+          resp2=$(curl -sS --fail-with-body -X POST "${API}/sendMessage"             -d chat_id="${CHAT_ID}"             -d parse_mode=HTML             -d text="📦 构建产物与运行信息"             -d reply_markup="$REPLY_MARKUP") || { echo "Telegram sendMessage failed:"; echo "${resp2}"; exit 1; }
+          echo "Telegram buttons sent ok"
