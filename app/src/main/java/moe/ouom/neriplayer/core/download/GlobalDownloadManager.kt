@@ -44,30 +44,27 @@ object GlobalDownloadManager {
     }
 
     private fun observeDownloadProgress(context: Context) {
-        scope.launch {
-            AudioDownloadManager.progressFlow.collect { progress ->
-                progress?.let { updateDownloadProgress(it) }
-            }
-
-            }
+    scope.launch {
+        AudioDownloadManager.progressFlow.collect { progress ->
+            progress?.let { updateDownloadProgress(it) }
         }
-
-        scope.launch {
-            AudioDownloadManager.batchProgressFlow.collect { batchProgress ->
-                batchProgress?.let {
-                    updateBatchProgress(context, it)
-                }
-            }
-        }
-
-        scope.launch {
-            AudioDownloadManager.isCancelledFlow.collect { isCancelled ->
-                if (isCancelled) {
-                    updateAllTasksStatus(DownloadStatus.CANCELLED)
-                }
+    }
+    scope.launch {
+        AudioDownloadManager.batchProgressFlow.collect { batchProgress ->
+            batchProgress?.let {
+                updateBatchProgress(context, it)
             }
         }
     }
+    scope.launch {
+        AudioDownloadManager.isCancelledFlow.collect { isCancelled ->
+            if (isCancelled) {
+                updateAllTasksStatus(DownloadStatus.CANCELLED)
+            }
+        }
+    }
+}
+
 
     private fun updateDownloadProgress(progress: AudioDownloadManager.DownloadProgress) {
         _downloadTasks.value = _downloadTasks.value.map { task ->
@@ -94,7 +91,6 @@ object GlobalDownloadManager {
             }
         }
     }
-
 
     fun scanLocalFiles(context: Context) {
         scope.launch {
@@ -377,4 +373,6 @@ enum class DownloadStatus {
     COMPLETED,
     FAILED,
     CANCELLED
+}
+
 }
