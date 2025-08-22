@@ -35,20 +35,28 @@ jobs:
           KEY_PWD: ${{ secrets.KEY_PASSWORD }}
         run: |
           ./gradlew clean :app:assembleRelease             -Pandroid.injected.signing.store.file="$PWD/app/neri.jks"             -Pandroid.injected.signing.store.password="$KS_PWD"             -Pandroid.injected.signing.key.alias="$ALIAS"             -Pandroid.injected.signing.key.password="$KEY_PWD"             --stacktrace
-      - name: 寻找 APK
+      - name: 寻找 APK（输出绝对路径）
         id: pick
         run: |
           set -e
-          f=$(ls -1 app/build/outputs/apk/*/release/*.apk 2>/dev/null | head -n 1 || true)
-          if [ -z "$f" ]; then f=$(find . -type f -name "*.apk" | head -n 1 || true); fi
-          echo "apk_path=$f" >> $GITHUB_OUTPUT
+          f=""
+          for p in             "app/build/outputs/apk/release/*.apk"             "app/build/outputs/apk/*/release/*.apk"             "app/build/outputs/*/release/*.apk"
+          do
+            c=$(compgen -G "$p" | head -n 1 || true)
+            if [ -n "$c" ]; then f="$c"; break; fi
+          done
+          if [ -z "$f" ]; then f=$(find app -type f -name "*.apk" | head -n 1 || true); fi
+          if [ -n "$f" ]; then
+            f=$(realpath "$f")
+          fi
+          echo "apk_path=$f" >> "$GITHUB_OUTPUT"
       - name: 上传构建产物
         if: steps.pick.outputs.apk_path != ''
         uses: actions/upload-artifact@v4
         with:
           name: app-release
           path: ${{ steps.pick.outputs.apk_path }}
-      - name: Telegram 通知成功
+      - name: Telegram 通知成功（附带 APK）
         if: steps.pick.outputs.apk_path != ''
         env:
           TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
@@ -60,12 +68,14 @@ jobs:
           BRANCH: ${{ github.ref_name }}
         run: |
           set -e
+          test -f "$APK_PATH"
+          ls -l "$APK_PATH"
           COMMIT_MSG="${{ github.event.head_commit.message }}"
           if [ -z "${COMMIT_MSG}" ]; then COMMIT_MSG="$(git log -1 --pretty=%s 2>/dev/null || echo '手动触发构建')"; fi
           commit_url="https://github.com/${REPO}/commit/${SHA}"
           nl=$'\n'
           caption="✅ 构建成功${nl}📦 仓库: ${REPO}${nl}🌿 分支: ${BRANCH}${nl}👤 提交者: ${ACTOR}${nl}📝 提交信息: ${COMMIT_MSG}${nl}🔗 提交详情: ${commit_url}"
-          curl -sS -X POST "https://api.telegram.org/bot${TOKEN}/sendDocument"             -F chat_id="${CHAT_ID}"             -F document=@"${APK_PATH}"             -F caption="${caption}"
+          curl -sS --fail-with-body -X POST "https://api.telegram.org/bot${TOKEN}/sendDocument"             -F chat_id="${CHAT_ID}"             -F "document=@${APK_PATH};type=application/vnd.android.package-archive"             -F caption="${caption}"
       - name: Telegram 通知失败
         if: failure()
         env:
