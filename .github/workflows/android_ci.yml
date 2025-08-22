@@ -11,17 +11,17 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-
       - name: 恢复签名文件
         env:
           KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
+        shell: bash
         run: |
           set -euo pipefail
           mkdir -p app
           echo "$KEYSTORE_B64" | base64 -d > app/neri.jks
           test -s app/neri.jks
-
       - name: 写入 keystore.properties
+        shell: bash
         run: |
           set -euo pipefail
           {
@@ -30,35 +30,33 @@ jobs:
             echo "keyAlias=${{ secrets.KEY_ALIAS }}"
             echo "keyPassword=${{ secrets.KEY_PASSWORD }}"
           } > keystore.properties
-
-      - run: chmod +x gradlew
-
+      - name: 准备 Gradle
+        shell: bash
+        run: chmod +x gradlew
       - name: 构建 Release
         env:
           KS_PWD: ${{ secrets.KEYSTORE_PASSWORD }}
           ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PWD: ${{ secrets.KEY_PASSWORD }}
+        shell: bash
         run: |
           set -euo pipefail
           ./gradlew clean :app:assembleRelease             -Pandroid.injected.signing.store.file="$PWD/app/neri.jks"             -Pandroid.injected.signing.store.password="$KS_PWD"             -Pandroid.injected.signing.key.alias="$ALIAS"             -Pandroid.injected.signing.key.password="$KEY_PWD"             --stacktrace
-
       - name: 定位 app-release.zip 并解压出 APK
         id: fromzip
+        shell: bash
         run: |
           set -euo pipefail
           if ! command -v unzip >/dev/null 2>&1; then
             sudo apt-get update -y
             sudo apt-get install -y unzip
           fi
-
           ZIP_PATH=""
           for pat in "app-release.zip" "*release*.zip" "*NeriPlayer*.zip"; do
             z=$(find . -type f -name "$pat" | head -n 1 || true)
             if [ -n "$z" ]; then ZIP_PATH="$z"; break; fi
           done
-
           if [ -z "$ZIP_PATH" ]; then
-            echo "未找到 zip 包，尝试直接在项目中寻找 APK …"
             APK=$(find app -type f -name "*.apk" | sort | head -n 1 || true)
             if [ -n "$APK" ]; then
               APK=$(realpath "$APK")
@@ -69,41 +67,34 @@ jobs:
             echo "既未找到 zip 也未找到 apk" >&2
             exit 1
           fi
-
           ZIP_PATH=$(realpath "$ZIP_PATH")
           echo "zip_path=$ZIP_PATH" >> "$GITHUB_OUTPUT"
-          echo "找到 ZIP: $ZIP_PATH"
-
-          # 解压到临时目录
           WORKDIR=$(mktemp -d)
           unzip -q -o "$ZIP_PATH" -d "$WORKDIR"
-
-          # 优先匹配 NeriPlayer-*.apk，若无则取最大的 .apk（使用 stat 避免 YAML 折行）
           APK=""
           APK=$(find "$WORKDIR" -type f -name 'NeriPlayer-*.apk' -exec stat -c '%s %n' {} + | sort -nr | head -n1 | cut -d' ' -f2- || true)
           if [ -z "$APK" ]; then
             APK=$(find "$WORKDIR" -type f -name '*.apk' -exec stat -c '%s %n' {} + | sort -nr | head -n1 | cut -d' ' -f2- || true)
           fi
-
           if [ -z "$APK" ]; then
             echo "ZIP 内未找到 APK" >&2
             exit 1
           fi
-
           APK=$(realpath "$APK")
           echo "apk_path=$APK" >> "$GITHUB_OUTPUT"
-          echo "解压得到 APK: $APK"
-
-      - name: 上传构建产物（ZIP 与 APK）
+      - name: 上传 APK 构建产物
         if: steps.fromzip.outputs.apk_path != ''
         uses: actions/upload-artifact@v4
         with:
-          name: app-release-bundle
-          path: |
-            ${{ steps.fromzip.outputs.zip_path }}
-            ${{ steps.fromzip.outputs.apk_path }}
-
-      - name: Telegram 通知（Python 发送，失败回退 ZIP）
+          name: app-apk
+          path: ${{ steps.fromzip.outputs.apk_path }}
+      - name: 上传 ZIP 构建产物（如果存在）
+        if: steps.fromzip.outputs.zip_path != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-zip
+          path: ${{ steps.fromzip.outputs.zip_path }}
+      - name: Telegram 通知（高亮版 + 按钮）
         if: steps.fromzip.outputs.apk_path != ''
         env:
           TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
@@ -114,78 +105,37 @@ jobs:
           REPO: ${{ github.repository }}
           ACTOR: ${{ github.actor }}
           BRANCH: ${{ github.ref_name }}
+          RUN_ID: ${{ github.run_id }}
+        shell: bash
         run: |
           set -euo pipefail
-          python3 - <<'PY'
-          import os, sys, json, pathlib, mimetypes, urllib.request
-          TOKEN = os.environ["TOKEN"]
-          CHAT_ID = os.environ["CHAT_ID"]
-          APK_PATH = os.environ["APK_PATH"]
-          ZIP_PATH = os.environ.get("ZIP_PATH","")
-          SHA = os.environ["SHA"]
-          REPO = os.environ["REPO"]
-          ACTOR = os.environ["ACTOR"]
-          BRANCH = os.environ["BRANCH"]
-
-          commit_url = f"https://github.com/{REPO}/commit/{SHA}"
-          caption = ("✅ 构建成功\n"
-                     f"📦 仓库: {REPO}\n"
-                     f"🌿 分支: {BRANCH}\n"
-                     f"👤 提交者: {ACTOR}\n"
-                     f"🔗 提交详情: {commit_url}")
-
-          def send_file(path, field_name="document", filename=None, mimetype=None):
-            if not filename:
-              filename = os.path.basename(path)
-            if not mimetype:
-              mt, _ = mimetypes.guess_type(filename)
-              mimetype = mt or "application/octet-stream"
-            boundary = "---------------------------TG" + os.urandom(8).hex()
-            def part_headers(name, filename=None, ctype=None):
-              hdr = f'Content-Disposition: form-data; name="{name}"'
-              if filename:
-                hdr += f'; filename="{filename}"'
-              hdr += "\r\n"
-              if ctype:
-                hdr += f"Content-Type: {ctype}\r\n"
-              return hdr + "\r\n"
-            with open(path, "rb") as f:
-              file_data = f.read()
-            body = []
-            body.append(f"--{boundary}\r\n".encode())
-            body.append(part_headers("chat_id").encode())
-            body.append(str(CHAT_ID).encode() + b"\r\n")
-            body.append(f"--{boundary}\r\n".encode())
-            body.append(part_headers("caption").encode())
-            body.append(caption.encode() + b"\r\n")
-            body.append(f"--{boundary}\r\n".encode())
-            body.append(part_headers(field_name, filename, mimetype).encode())
-            body.append(file_data)
-            body.append(b"\r\n")
-            body.append(f"--{boundary}--\r\n".encode())
-            data = b"".join(body)
-            url = f"https://api.telegram.org/bot{TOKEN}/sendDocument"
-            req = urllib.request.Request(url, data=data, method="POST")
-            req.add_header("Content-Type", f"multipart/form-data; boundary={boundary}")
-            req.add_header("Content-Length", str(len(data)))
-            try:
-              with urllib.request.urlopen(req, timeout=120) as resp:
-                resp_body = resp.read()
-                print("Telegram OK:", resp.status, len(resp_body))
-                return True
-            except Exception as e:
-              print("Telegram error:", e, file=sys.stderr)
-              return False
-
-          if not send_file(APK_PATH, filename=os.path.basename(APK_PATH), mimetype="application/vnd.android.package-archive"):
-            if ZIP_PATH and os.path.exists(ZIP_PATH):
-              ok = send_file(ZIP_PATH, filename=os.path.basename(ZIP_PATH), mimetype="application/zip")
-              if not ok:
-                sys.exit(1)
-            else:
-              sys.exit(1)
-          PY
-
+          BYTES=$(stat -c%s "$APK_PATH")
+          APK_MB=$(awk "BEGIN{printf "%.1f", $BYTES/1024/1024}")
+          SHORT_SHA="${SHA:0:7}"
+          COMMIT_MSG="${{ github.event.head_commit.message }}"
+          if [ -z "$COMMIT_MSG" ]; then COMMIT_MSG="$(git log -1 --pretty=%s 2>/dev/null || echo '手动触发构建')"; fi
+          COMMIT_URL="https://github.com/${REPO}/commit/${SHA}"
+          RUN_URL="https://github.com/${REPO}/actions/runs/${RUN_ID}"
+          html_escape() { sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g'; }
+          COMMIT_MSG_ESC="$(printf '%s' "$COMMIT_MSG" | html_escape | head -c 900)"
+          if [ "${#COMMIT_MSG_ESC}" -ge 900 ]; then COMMIT_MSG_ESC="${COMMIT_MSG_ESC}…"; fi
+          FANCY_NAME="NeriPlayer-${SHORT_SHA}.apk"
+          caption="<b>🚀 NeriPlayer ${SHORT_SHA}</b>\n<code>${APK_MB} MB APK</code>\n\n<b>✅ 构建成功</b>\n<b>📦 仓库：</b>${REPO}\n<b>🌿 分支：</b>${BRANCH}\n<b>👤 提交者：</b>${ACTOR}\n\n<b>🧾 提交说明：</b>\n<pre><code>ฅ՞•ﻌ•՞ฅ\n${COMMIT_MSG_ESC}\n</code></pre>"
+          reply='{"inline_keyboard":[
+            [{"text":"🔗 提交详情","url":"'"$COMMIT_URL"'"}],
+            [{"text":"📃 Actions 运行","url":"'"$RUN_URL"'"}]
+          ]}'
+          set +e
+          curl -sS --fail-with-body -X POST "https://api.telegram.org/bot${TOKEN}/sendDocument"             -F chat_id="${CHAT_ID}"             -F parse_mode="HTML"             -F "reply_markup=${reply}"             -F "document=@-;filename=${FANCY_NAME};type=application/vnd.android.package-archive"             -F caption="${caption}" < "$APK_PATH"
+          rc=$?
+          set -e
+          if [ $rc -ne 0 ]; then
+            if [ -n "${ZIP_PATH:-}" ] && [ -f "${ZIP_PATH:-}" ]; then
+              curl -sS --fail-with-body -X POST "https://api.telegram.org/bot${TOKEN}/sendDocument"                 -F chat_id="${CHAT_ID}"                 -F parse_mode="HTML"                 -F "reply_markup=${reply}"                 -F "document=@${ZIP_PATH};type=application/zip"                 -F caption="${caption}"
+            else
+              exit 1
+            fi
+          fi
       - name: Telegram 通知失败
         if: failure()
         env:
@@ -195,8 +145,10 @@ jobs:
           REPO: ${{ github.repository }}
           ACTOR: ${{ github.actor }}
           BRANCH: ${{ github.ref_name }}
+          RUN_ID: ${{ github.run_id }}
+        shell: bash
         run: |
           set -euo pipefail
           nl=$'\n'
-          msg="❌ 构建失败${nl}📦 仓库: ${REPO}${nl}🌿 分支: ${BRANCH}${nl}👤 触发者: ${ACTOR}${nl}🔗 https://github.com/${REPO}/actions/runs/${{ github.run_id }}"
+          msg="❌ 构建失败${nl}📦 仓库: ${REPO}${nl}🌿 分支: ${BRANCH}${nl}👤 触发者: ${ACTOR}${nl}🔗 https://github.com/${REPO}/actions/runs/${RUN_ID}"
           curl -sS "https://api.telegram.org/bot${TOKEN}/sendMessage"             -d chat_id="${CHAT_ID}"             -d text="${msg}"
