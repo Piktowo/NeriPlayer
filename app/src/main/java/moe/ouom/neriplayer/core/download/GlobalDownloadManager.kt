@@ -49,9 +49,7 @@ object GlobalDownloadManager {
                 progress?.let { updateDownloadProgress(it) }
             }
 
-            }
         }
-
         scope.launch {
             AudioDownloadManager.batchProgressFlow.collect { batchProgress ->
                 batchProgress?.let {
@@ -95,8 +93,7 @@ object GlobalDownloadManager {
         }
     }
 
-    private fun updateComp描本地文件，更新已下载歌曲列表
-     */
+   
     fun scanLocalFiles(context: Context) {
         scope.launch {
             _isRefreshing.value = true
@@ -378,4 +375,5 @@ enum class DownloadStatus {
     COMPLETED,
     FAILED,
     CANCELLED
+}
 }
