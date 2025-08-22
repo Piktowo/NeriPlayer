@@ -95,8 +95,7 @@ object GlobalDownloadManager {
         }
     }
 
-    private fun updateComp描本地文件，更新已下载歌曲列表
-     */
+
     fun scanLocalFiles(context: Context) {
         scope.launch {
             _isRefreshing.value = true
