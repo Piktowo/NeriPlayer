@@ -1,154 +1,127 @@
 name: Android CI
 on:
   workflow_dispatch:
+
 jobs:
   build:
     if: github.ref == 'refs/heads/7zz'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
-      - name: 恢复签名文件
+
+      - name: Restore keystore file
         env:
           KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
-        shell: bash
         run: |
           set -euo pipefail
-          mkdir -p app
-          echo "$KEYSTORE_B64" | base64 -d > app/neri.jks
-          test -s app/neri.jks
-      - name: 写入 keystore.properties
-        shell: bash
+          if [ -n "${KEYSTORE_B64:-}" ]; then
+            mkdir -p app
+            echo "$KEYSTORE_B64" | base64 -d > app/release.keystore
+          fi
+
+      - name: Write signing props
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          {
-            echo "storeFile=app/neri.jks"
-            echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}"
-            echo "keyAlias=${{ secrets.KEY_ALIAS }}"
-            echo "keyPassword=${{ secrets.KEY_PASSWORD }}"
-          } > keystore.properties
-      - name: 准备 Gradle
-        shell: bash
+          if [ -n "${KEYSTORE_PASSWORD:-}" ] && [ -n "${KEY_ALIAS:-}" ] && [ -n "${KEY_PASSWORD:-}" ]; then
+            mkdir -p app
+            {
+              echo "storeFile=release.keystore"
+              echo "storePassword=${KEYSTORE_PASSWORD}"
+              echo "keyAlias=${KEY_ALIAS}"
+              echo "keyPassword=${KEY_PASSWORD}"
+            } > app/keystore.properties
+          fi
+
+      - name: Prepare Gradle
         run: chmod +x gradlew
-      - name: 构建 Release
+
+      - name: Build Release
         env:
           KS_PWD: ${{ secrets.KEYSTORE_PASSWORD }}
           ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PWD: ${{ secrets.KEY_PASSWORD }}
-        shell: bash
         run: |
           set -euo pipefail
-          ./gradlew clean :app:assembleRelease             -Pandroid.injected.signing.store.file="$PWD/app/neri.jks"             -Pandroid.injected.signing.store.password="$KS_PWD"             -Pandroid.injected.signing.key.alias="$ALIAS"             -Pandroid.injected.signing.key.password="$KEY_PWD"             --stacktrace
-      - name: 定位 app-release.zip 并解压出 APK
-        id: fromzip
-        shell: bash
+          ./gradlew clean :app:assembleRelease --stacktrace --no-daemon
+
+      - name: Package APK as zip
+        id: pack
         run: |
           set -euo pipefail
-          if ! command -v unzip >/dev/null 2>&1; then
-            sudo apt-get update -y
-            sudo apt-get install -y unzip
-          fi
-          ZIP_PATH=""
-          for pat in "app-release.zip" "*release*.zip" "*NeriPlayer*.zip"; do
-            z=$(find . -type f -name "$pat" | head -n 1 || true)
-            if [ -n "$z" ]; then ZIP_PATH="$z"; break; fi
-          done
-          if [ -z "$ZIP_PATH" ]; then
-            APK=$(find app -type f -name "*.apk" | sort | head -n 1 || true)
-            if [ -n "$APK" ]; then
-              APK=$(realpath "$APK")
-              echo "apk_path=$APK" >> "$GITHUB_OUTPUT"
-              echo "zip_path=" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-            echo "既未找到 zip 也未找到 apk" >&2
+          mkdir -p out
+          APK_PATH="$(ls -1 app/build/outputs/apk/release/*-*.apk 2>/dev/null | head -n1 || true)"
+          if [ -z "${APK_PATH}" ]; then
+            echo "No APK found under app/build/outputs/apk/release" >&2
             exit 1
           fi
-          ZIP_PATH=$(realpath "$ZIP_PATH")
-          echo "zip_path=$ZIP_PATH" >> "$GITHUB_OUTPUT"
-          WORKDIR=$(mktemp -d)
-          unzip -q -o "$ZIP_PATH" -d "$WORKDIR"
-          APK=""
-          APK=$(find "$WORKDIR" -type f -name 'NeriPlayer-*.apk' -exec stat -c '%s %n' {} + | sort -nr | head -n1 | cut -d' ' -f2- || true)
-          if [ -z "$APK" ]; then
-            APK=$(find "$WORKDIR" -type f -name '*.apk' -exec stat -c '%s %n' {} + | sort -nr | head -n1 | cut -d' ' -f2- || true)
-          fi
-          if [ -z "$APK" ]; then
-            echo "ZIP 内未找到 APK" >&2
-            exit 1
-          fi
-          APK=$(realpath "$APK")
-          echo "apk_path=$APK" >> "$GITHUB_OUTPUT"
-      - name: 上传 APK 构建产物
-        if: steps.fromzip.outputs.apk_path != ''
+          ZIP_PATH="out/app-apk.zip"
+          rm -f "${ZIP_PATH}"
+          zip -j "${ZIP_PATH}" "${APK_PATH}"
+          echo "apk_path=${APK_PATH}" >> $GITHUB_OUTPUT
+          echo "zip_path=${ZIP_PATH}" >> $GITHUB_OUTPUT
+
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-apk
-          path: ${{ steps.fromzip.outputs.apk_path }}
-      - name: 上传 ZIP 构建产物（如果存在）
-        if: steps.fromzip.outputs.zip_path != ''
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-zip
-          path: ${{ steps.fromzip.outputs.zip_path }}
-      - name: Telegram 通知（高亮版 + 按钮）
-        if: steps.fromzip.outputs.apk_path != ''
+          path: out/app-apk.zip
+          if-no-files-found: error
+          compression-level: 9
+          retention-days: 7
+
+      - name: Telegram Notify (file upload + buttons)
+        if: ${{ success() }}
         env:
           TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          APK_PATH: ${{ steps.fromzip.outputs.apk_path }}
-          ZIP_PATH: ${{ steps.fromzip.outputs.zip_path }}
-          SHA: ${{ github.sha }}
-          REPO: ${{ github.repository }}
-          ACTOR: ${{ github.actor }}
-          BRANCH: ${{ github.ref_name }}
+          CAPTION: ${{ github.repository }} | ${{ github.ref_name }} | ${{ github.sha }}
+          ZIP_PATH: ${{ steps.pack.outputs.zip_path }}
+          APK_PATH: ${{ steps.pack.outputs.apk_path }}
           RUN_ID: ${{ github.run_id }}
-        shell: bash
+          REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          BYTES=$(stat -c%s "$APK_PATH")
-          APK_MB=$(awk "BEGIN{printf "%.1f", $BYTES/1024/1024}")
-          SHORT_SHA="${SHA:0:7}"
-          COMMIT_MSG="${{ github.event.head_commit.message }}"
-          if [ -z "$COMMIT_MSG" ]; then COMMIT_MSG="$(git log -1 --pretty=%s 2>/dev/null || echo '手动触发构建')"; fi
-          COMMIT_URL="https://github.com/${REPO}/commit/${SHA}"
-          RUN_URL="https://github.com/${REPO}/actions/runs/${RUN_ID}"
-          html_escape() { sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g'; }
-          COMMIT_MSG_ESC="$(printf '%s' "$COMMIT_MSG" | html_escape | head -c 900)"
-          if [ "${#COMMIT_MSG_ESC}" -ge 900 ]; then COMMIT_MSG_ESC="${COMMIT_MSG_ESC}…"; fi
-          FANCY_NAME="NeriPlayer-${SHORT_SHA}.apk"
-          caption="<b>🚀 NeriPlayer ${SHORT_SHA}</b>\n<code>${APK_MB} MB APK</code>\n\n<b>✅ 构建成功</b>\n<b>📦 仓库：</b>${REPO}\n<b>🌿 分支：</b>${BRANCH}\n<b>👤 提交者：</b>${ACTOR}\n\n<b>🧾 提交说明：</b>\n<pre><code>ฅ՞•ﻌ•՞ฅ\n${COMMIT_MSG_ESC}\n</code></pre>"
-          reply='{"inline_keyboard":[
-            [{"text":"🔗 提交详情","url":"'"$COMMIT_URL"'"}],
-            [{"text":"📃 Actions 运行","url":"'"$RUN_URL"'"}]
-          ]}'
-          set +e
-          curl -sS --fail-with-body -X POST "https://api.telegram.org/bot${TOKEN}/sendDocument"             -F chat_id="${CHAT_ID}"             -F parse_mode="HTML"             -F "reply_markup=${reply}"             -F "document=@-;filename=${FANCY_NAME};type=application/vnd.android.package-archive"             -F caption="${caption}" < "$APK_PATH"
-          rc=$?
-          set -e
-          if [ $rc -ne 0 ]; then
-            if [ -n "${ZIP_PATH:-}" ] && [ -f "${ZIP_PATH:-}" ]; then
-              curl -sS --fail-with-body -X POST "https://api.telegram.org/bot${TOKEN}/sendDocument"                 -F chat_id="${CHAT_ID}"                 -F parse_mode="HTML"                 -F "reply_markup=${reply}"                 -F "document=@${ZIP_PATH};type=application/zip"                 -F caption="${caption}"
-            else
-              exit 1
-            fi
+          API="https://api.telegram.org/bot${TOKEN}"
+          caption="${CAPTION}"
+          sent=0
+          if [ -n "${ZIP_PATH:-}" ] && [ -f "${ZIP_PATH}" ]; then
+            curl -sS --fail-with-body -F chat_id="${CHAT_ID}" -F "caption=${caption}" -F "document=@${ZIP_PATH};type=application/zip" "${API}/sendDocument" >/dev/null && sent=1
+          elif [ -n "${APK_PATH:-}" ] && [ -f "${APK_PATH}" ]; then
+            curl -sS --fail-with-body -F chat_id="${CHAT_ID}" -F "caption=${caption}" -F "document=@${APK_PATH};type=application/vnd.android.package-archive" "${API}/sendDocument" >/dev/null && sent=1
           fi
-      - name: Telegram 通知失败
-        if: failure()
+          if [ $sent -eq 1 ]; then
+            artifact_url="https://github.com/${REPO}/actions/runs/${RUN_ID}#artifacts"
+            run_url="https://github.com/${REPO}/actions/runs/${RUN_ID}"
+            if command -v jq >/dev/null 2>&1; then
+              btn_payload=$(jq -n --arg art "$artifact_url" --arg run "$run_url" '{inline_keyboard:[[{"text":"⬇️ 下载产物","url":$art},{"text":"🔗 查看构建","url":$run}]]}')
+            else
+              btn_payload='{"inline_keyboard":[[{"text":"⬇️ 下载产物","url":"'"$artifact_url"'"},{"text":"🔗 查看构建","url":"'"$run_url"'"}]]}'
+            fi
+            curl -sS --fail-with-body -X POST "${API}/sendMessage" -d chat_id="${CHAT_ID}" -d text="📦 构建产物与运行信息" -d parse_mode="HTML" -d reply_markup="$btn_payload" >/dev/null
+          fi
+
+      - name: Telegram Notify (failure)
+        if: ${{ failure() }}
         env:
           TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          SHA: ${{ github.sha }}
           REPO: ${{ github.repository }}
-          ACTOR: ${{ github.actor }}
           BRANCH: ${{ github.ref_name }}
+          ACTOR: ${{ github.actor }}
           RUN_ID: ${{ github.run_id }}
-        shell: bash
         run: |
           set -euo pipefail
           nl=$'\n'
-          msg="❌ 构建失败${nl}📦 仓库: ${REPO}${nl}🌿 分支: ${BRANCH}${nl}👤 触发者: ${ACTOR}${nl}🔗 https://github.com/${REPO}/actions/runs/${RUN_ID}"
-          curl -sS "https://api.telegram.org/bot${TOKEN}/sendMessage"             -d chat_id="${CHAT_ID}"             -d text="${msg}"
+          msg="❌ 构建失败${nl}📦 仓库: ${REPO}${nl}🌿 分支: ${BRANCH}${nl}🧑‍💻 提交者: ${ACTOR}${nl}🔗 https://github.com/${REPO}/actions/runs/${RUN_ID}"
+          curl -sS --fail-with-body -X POST "https://api.telegram.org/bot${TOKEN}/sendMessage" -d chat_id="${CHAT_ID}" -d text="${msg}"
