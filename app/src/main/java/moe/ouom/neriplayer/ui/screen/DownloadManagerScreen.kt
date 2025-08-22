@@ -58,7 +58,6 @@ fun DownloadManagerScreen(
     var selectionMode by remember { mutableStateOf(false) }
     var selectedSongs by remember { mutableStateOf(setOf<Long>()) }
 
-    // State for deletion confirmation dialogs
     var showSingleDeleteDialog by remember { mutableStateOf(false) }
     var songToDelete by remember { mutableStateOf<DownloadedSong?>(null) }
     var showMultiDeleteDialog by remember { mutableStateOf(false) }
@@ -68,7 +67,7 @@ fun DownloadManagerScreen(
             .fillMaxSize()
             .background(Color.Transparent)
     ) {
-        // 顶部栏
+
         TopAppBar(
             title = {
                 Column {
@@ -94,14 +93,14 @@ fun DownloadManagerScreen(
             ),
             actions = {
                 if (selectionMode) {
-                    // 多选模式下的操作按钮
+
                     Text(
                         text = "已选 ${selectedSongs.size} 首",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(end = 8.dp)
                     )
-                    // 全选/取消全选按钮
+
                     val downloadedSongs by viewModel.downloadedSongs.collectAsState()
                     val allSelected = selectedSongs.size == downloadedSongs.size && downloadedSongs.isNotEmpty()
                     IconButton(
@@ -123,7 +122,7 @@ fun DownloadManagerScreen(
                         onClick = {
                             context.performHapticFeedback()
                             if (selectedSongs.isNotEmpty()) {
-                                showMultiDeleteDialog = true // Show confirmation dialog
+                                showMultiDeleteDialog = true
                             }
                         }
                     ) {
@@ -139,7 +138,7 @@ fun DownloadManagerScreen(
                         Icon(Icons.Default.Close, contentDescription = "退出多选")
                     }
                 } else {
-                    // 正常模式下的操作按钮
+
                     IconButton(
                         onClick = {
                             context.performHapticFeedback()
@@ -160,7 +159,6 @@ fun DownloadManagerScreen(
             }
         )
 
-        // 下载统计信息
         val downloadedSongs by viewModel.downloadedSongs.collectAsState()
         val totalSize = remember(downloadedSongs) {
             downloadedSongs.sumOf { it.fileSize }
@@ -223,7 +221,6 @@ fun DownloadManagerScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 搜索框
         OutlinedTextField(
             value = searchQuery,
             onValueChange = { searchQuery = it },
@@ -246,13 +243,10 @@ fun DownloadManagerScreen(
             selectedSongs = emptySet()
         }
 
-        // 多选优先退出
         BackHandler(enabled = selectionMode) { exitSelectionMode() }
 
-        // 进行中的下载任务
         OngoingDownloadTasks(viewModel = viewModel)
 
-        // 已下载歌曲列表
         DownloadedSongsList(
             viewModel = viewModel,
             searchQuery = searchQuery,
@@ -267,7 +261,6 @@ fun DownloadManagerScreen(
         )
     }
 
-    // Single song delete confirmation dialog
     if (showSingleDeleteDialog && songToDelete != null) {
         AlertDialog(
             onDismissRequest = {
@@ -300,7 +293,6 @@ fun DownloadManagerScreen(
         )
     }
 
-    // Multiple songs delete confirmation dialog
     if (showMultiDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showMultiDeleteDialog = false },
@@ -346,7 +338,6 @@ private fun DownloadedSongsList(
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val miniPlayerHeight = LocalMiniPlayerHeight.current
 
-    // 过滤搜索结果
     val filteredSongs = remember(downloadedSongs, searchQuery) {
         if (searchQuery.isBlank()) {
             downloadedSongs
@@ -475,7 +466,7 @@ private fun DownloadedSongItem(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 多选复选框
+
             if (selectionMode) {
                 Checkbox(
                     checked = isSelected,
@@ -488,9 +479,8 @@ private fun DownloadedSongItem(
                 )
             }
 
-            // 封面或音乐图标
             if (song.coverPath != null) {
-                // 显示封面
+
                 AsyncImage(
                     model = java.io.File(song.coverPath).toURI().toString(),
                     contentDescription = null,
@@ -501,7 +491,7 @@ private fun DownloadedSongItem(
                     error = painterResource(id = R.drawable.ic_launcher_foreground)
                 )
             } else {
-                // 显示默认音乐图标
+
                 Box(
                     modifier = Modifier
                         .size(48.dp)
@@ -520,7 +510,6 @@ private fun DownloadedSongItem(
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            // 歌曲信息
             Column(
                 modifier = Modifier.weight(1f)
             ) {
@@ -549,8 +538,6 @@ private fun DownloadedSongItem(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-
-            // 操作按钮
             if (!selectionMode) {
                 Row {
                     IconButton(onClick = onPlay) {

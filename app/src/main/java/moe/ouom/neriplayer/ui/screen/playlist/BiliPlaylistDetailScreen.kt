@@ -1,28 +1,5 @@
 package moe.ouom.neriplayer.ui.screen.playlist
 
-/*
- * NeriPlayer - A unified Android player for streaming music and videos from multiple online platforms.
- * Copyright (C) 2025-2025 NeriPlayer developers
- * https://github.com/cwuom/NeriPlayer
- *
- * This software is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
- *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software.
- * If not, see <https://www.gnu.org/licenses/>.
- *
- * File: moe.ouom.neriplayer.ui.screen.playlist/BiliPlaylistDetailScreen
- * Created: 2025/8/15
- */
-
 import android.app.Application
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -207,9 +184,9 @@ fun BiliPlaylistDetailScreen(
                                 Icon(Icons.AutoMirrored.Outlined.PlaylistAdd, contentDescription = "导出到歌单")
                             }
                             HapticIconButton(
-                                onClick = { 
+                                onClick = {
                                     if (selectedIds.isNotEmpty()) {
-                                        // 先立即退出多选
+
                                         exitSelection()
                                         val selectedSongs = ArrayList<SongItem>()
                                         ui.videos.forEach { video: BiliVideoItem ->
@@ -229,7 +206,7 @@ fun BiliPlaylistDetailScreen(
                                                 )
                                             }
                                         }
-                                        // 开始批量下载
+
                                         downloadManager.startBatchDownload(context, selectedSongs)
                                     }
                                 },
@@ -721,8 +698,7 @@ private fun VideoRow(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        
-        // 更多操作菜单
+
         if (!selectionMode) {
             var showMoreMenu by remember { mutableStateOf(false) }
             Box {
@@ -735,7 +711,7 @@ private fun VideoRow(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                
+
                 DropdownMenu(
                     expanded = showMoreMenu,
                     onDismissRequest = { showMoreMenu = false }

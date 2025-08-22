@@ -32,7 +32,6 @@ class NeteaseApiProbeViewModel(app: Application) : AndroidViewModel(app) {
     private val _ui = MutableStateFlow(ProbeUiState())
     val ui: StateFlow<ProbeUiState> = _ui
 
-    /** 初始化 Cookie */
     private suspend fun ensureCookies() {
         val cookies = withContext(Dispatchers.IO) { repo.getCookiesOnce() }.toMutableMap()
         if (!cookies.containsKey("os")) cookies["os"] = "pc"
@@ -84,7 +83,6 @@ class NeteaseApiProbeViewModel(app: Application) : AndroidViewModel(app) {
                 val likedPlIdRaw = withContext(Dispatchers.IO) { client.getLikedPlaylistId(0) }
                 val lyric33894312Raw = withContext(Dispatchers.IO) { client.getLyricNew(33894312L) }
 
-                // 组装聚合 JSON
                 val result = JSONObject().apply {
                     put("account", JSONObject(accountRaw))
                     put("userId", userId)
@@ -92,7 +90,7 @@ class NeteaseApiProbeViewModel(app: Application) : AndroidViewModel(app) {
                     put("subscribedPlaylists", JSONObject(subsRaw))
                     put("likedPlaylistId", JSONObject(likedPlIdRaw))
                     put("lyric_33894312", JSONObject(lyric33894312Raw))
-                    // 不包含 liked songs list
+
                 }.toString()
 
                 copyToClipboard("netease_api_all", result)

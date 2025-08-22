@@ -1,29 +1,5 @@
 package moe.ouom.neriplayer.core.player
 
-/*
- * NeriPlayer - A unified Android player for streaming music and videos from multiple online platforms.
- * Copyright (C) 2025-2025 NeriPlayer developers
- * https://github.com/cwuom/NeriPlayer
- *
- * This software is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
- *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software.
- * If not, see <https://www.gnu.org/licenses/>.
- *
- * File: moe.ouom.neriplayer.core.player/AudioPlayerService
- * Created: 2025/8/11
- */
-
-
 import android.app.Application
 import android.app.Notification
 import android.app.NotificationChannel
@@ -83,7 +59,6 @@ class AudioPlayerService : Service() {
 
     private lateinit var mediaSession: MediaSessionCompat
 
-    // 封面缓存
     private var currentCoverUrl: String? = null
     private var currentLargeIcon: Bitmap? = null
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -131,8 +106,6 @@ class AudioPlayerService : Service() {
             }
         }
 
-
-        // 通知渠道
         val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         val channel = NotificationChannel(
             CHANNEL_ID,
@@ -141,7 +114,6 @@ class AudioPlayerService : Service() {
         )
         nm.createNotificationChannel(channel)
 
-        // 拔出耳机自动暂停
         becomingNoisyReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
                 if (intent.action == AudioManager.ACTION_AUDIO_BECOMING_NOISY) {
@@ -163,7 +135,6 @@ class AudioPlayerService : Service() {
 
         startForeground(NOTIFICATION_ID, buildNotification())
 
-        // 处理媒体按钮
         MediaButtonReceiver.handleIntent(mediaSession, intent)
 
         when (intent?.action) {
@@ -209,17 +180,9 @@ class AudioPlayerService : Service() {
             }
         }
 
-//        val notif = buildNotification()
-//        startForeground(NOTIFICATION_ID, notif)
-
         return START_STICKY
     }
 
-    /**
-     * 构建前台播放通知（媒体样式）
-     * - 根据 isPlaying 决定显示 播放/暂停 图标与意图
-     * - 收藏按钮使用自定义 Action
-     */
     private fun buildNotification(): Notification {
         val isPlaying = PlayerManager.isPlayingFlow.value
         val song = PlayerManager.currentSongFlow.value
@@ -276,7 +239,6 @@ class AudioPlayerService : Service() {
         builder.addAction(android.R.drawable.ic_media_next, "下一首", nextIntent)
         builder.addAction(favAction)
 
-        // 标题/副标题/封面
         builder.setContentTitle(song?.name ?: "NeriPlayer")
         builder.setContentText(song?.artist ?: "")
         currentLargeIcon?.let { builder.setLargeIcon(it) }
@@ -284,16 +246,12 @@ class AudioPlayerService : Service() {
         return builder.build()
     }
 
-    /**
-     * 聚合更新
-     */
     private fun updateAll() {
         updateMetadata()
         updatePlaybackState()
         updateNotification()
     }
 
-    /** 构建指向本 Service 的 PendingIntent */
     private fun servicePendingIntent(action: String, requestCode: Int): PendingIntent {
         return PendingIntent.getService(
             this,
@@ -312,7 +270,6 @@ class AudioPlayerService : Service() {
         val song = PlayerManager.currentSongFlow.value
         val duration = song?.durationMs ?: 0L
 
-        // 封面 URL 变更则异步加载
         if (song?.coverUrl != currentCoverUrl) {
             currentCoverUrl = song?.coverUrl
             currentLargeIcon = null
@@ -367,13 +324,9 @@ class AudioPlayerService : Service() {
         mediaSession.setPlaybackState(stateBuilder.build())
     }
 
-    /**
-     * 使用 Coil 异步加载通知大图标封面
-     * 仅当回调时 URL 仍是当前曲目的封面时才应用，避免竞态导致的封面错位
-     */
     private fun requestLargeIconAsync(url: String?) {
         if (url.isNullOrBlank()) {
-            // 清空封面 UI
+
             currentLargeIcon = null
             updateNotification()
             return

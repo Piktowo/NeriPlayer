@@ -1,28 +1,5 @@
 package moe.ouom.neriplayer.ui.component
 
-/*
- * NeriPlayer - A unified Android player for streaming music and videos from multiple online platforms.
- * Copyright (C) 2025-2025 NeriPlayer developers
- * https://github.com/cwuom/NeriPlayer
- *
- * This software is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
- *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software.
- * If not, see <https://www.gnu.org/licenses/>.
- *
- * File: moe.ouom.neriplayer.ui.component/WaveformSlider
- * Created: 2025/8/11
- */
-
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -49,9 +26,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import kotlin.math.sin
 
-private const val WAVE_AMPLITUDE = 6f   // 波浪的振幅
-private const val WAVE_FREQUENCY = 0.08f // 波浪的频率
-private const val WAVE_ANIMATION_DURATION = 2000 // 波浪滚动一周的时间
+private const val WAVE_AMPLITUDE = 6f
+private const val WAVE_FREQUENCY = 0.08f
+private const val WAVE_ANIMATION_DURATION = 2000
 
 @Composable
 fun WaveformSlider(

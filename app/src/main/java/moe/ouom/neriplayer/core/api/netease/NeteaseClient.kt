@@ -1,28 +1,5 @@
 package moe.ouom.neriplayer.core.api.netease
 
-/*
- * NeriPlayer - A unified Android player for streaming music and videos from multiple online platforms.
- * Copyright (C) 2025-2025 NeriPlayer developers
- * https://github.com/cwuom/NeriPlayer
- *
- * This software is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
- *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software.
- * If not, see <https://www.gnu.org/licenses/>.
- *
- * File: moe.ouom.neriplayer.core.api.netease/NeteaseClient
- * Created: 2025/8/10
- */
-
 import moe.ouom.neriplayer.util.JsonUtil.jsonQuote
 import moe.ouom.neriplayer.util.NPLogger
 import moe.ouom.neriplayer.util.readBytesCompat
@@ -63,22 +40,19 @@ class NeteaseClient(bypassProxy: Boolean = true) {
                     return cookieStore[url.host] ?: emptyList()
                 }
             })
-            // use a dynamic ProxySelector so bypass can be toggled at runtime
+
             .proxySelector(DynamicProxySelector)
             .build()
     }
 
-    /** 是否已登录 */
     fun hasLogin(): Boolean = !persistedCookies["MUSIC_U"].isNullOrBlank()
 
-    /** 设置/更新持久化 Cookie，并把它们注入到本实例的 CookieJar */
     fun setPersistedCookies(cookies: Map<String, String>) {
         val m = cookies.toMutableMap()
         m.putIfAbsent("os", "pc")
         m.putIfAbsent("appver", "8.10.35")
         persistedCookies = m.toMap()
 
-        // 把持久化 Cookie 注入到运行期 CookieJar，便于本实例读取 __csrf 等
         seedCookieJarFromPersisted("music.163.com")
         seedCookieJarFromPersisted("interface.music.163.com")
     }
@@ -89,7 +63,7 @@ class NeteaseClient(bypassProxy: Boolean = true) {
             val c = Cookie.Builder()
                 .name(name)
                 .value(value)
-                .domain(host)    // 域 Cookie
+                .domain(host)
                 .path("/")
                 .build()
             list.removeAll { it.name == name }
@@ -97,10 +71,6 @@ class NeteaseClient(bypassProxy: Boolean = true) {
         }
     }
 
-    /**
-     * Returns a snapshot of all cookies currently in memory, flattened by name.
-     * Later occurrences override earlier ones.
-     */
     fun getCookies(): Map<String, String> {
         val result = LinkedHashMap<String, String>()
         cookieStore.values.forEach { list -> list.forEach { cookie -> result[cookie.name] = cookie.value } }
@@ -125,7 +95,6 @@ class NeteaseClient(bypassProxy: Boolean = true) {
         return map.entries.joinToString("; ") { (k, v) -> "$k=$v" }
     }
 
-    /** 访问一次站点首页，通常会下发 __csrf 等 Cookie */
     @Throws(IOException::class)
     fun ensureWeapiSession() {
         request(
@@ -168,7 +137,6 @@ class NeteaseClient(bypassProxy: Boolean = true) {
             buildPersistedCookieHeader()?.let { builder.header("Cookie", it) }
         }
 
-        // WEAPI 的 csrf_token 优先用持久化 Cookie，再回退本地 CookieJar
         if (mode == CryptoMode.WEAPI) {
             val csrf = persistedCookies["__csrf"] ?: getCookie("__csrf") ?: ""
             reqUrl = requestUrl.newBuilder()
@@ -225,7 +193,6 @@ class NeteaseClient(bypassProxy: Boolean = true) {
         return request(url, params, CryptoMode.LINUX, "POST", usePersistedCookies)
     }
 
-    // 认证相关
     @Throws(IOException::class)
     fun loginByPhone(phone: String, password: String, countryCode: Int = 86, remember: Boolean = true): String {
         val params = mutableMapOf<String, Any>(
@@ -264,7 +231,6 @@ class NeteaseClient(bypassProxy: Boolean = true) {
         return callEApi("/w/login/cellphone", params, usePersistedCookies = false)
     }
 
-    // 业务接口
     @Throws(IOException::class)
     fun getRecommendedPlaylists(limit: Int = 30): String {
         val url = "https://music.163.com/weapi/personalized/playlist"
@@ -285,12 +251,6 @@ class NeteaseClient(bypassProxy: Boolean = true) {
         return request(url, params, CryptoMode.WEAPI, "POST", usePersistedCookies = true)
     }
 
-    /**
-     * 获取下载链接
-     * 如果已登录但拿不到 URL，先预热拿 __csrf 再重试一次
-     * @param songId 歌曲 ID
-     * @param level 音质 （standard, exhigh, lossless, hires, jyeffect(高清环绕声), sky(沉浸环绕声), jymaster(超清母带)）
-     * */
     @Throws(IOException::class)
     fun getSongDownloadUrl(songId: Long, level: String = "lossless"): String {
         fun call(): String {
@@ -419,12 +379,6 @@ class NeteaseClient(bypassProxy: Boolean = true) {
         return callWeApi("/playlist/highquality/list", params, usePersistedCookies = true)
     }
 
-    /**
-     * 获取用户创建的歌单
-     * @param userId 用户 ID；传 0 时自动使用当前登录用户 ID
-     * @param offset 偏移量，分页用
-     * @param limit  每页返回数量
-     */
     @Throws(IOException::class)
     fun getUserCreatedPlaylists(userId: Long, offset: Int = 0, limit: Int = 1000): String {
         val uid = if (userId == 0L) getCurrentUserId() else userId
@@ -452,12 +406,6 @@ class NeteaseClient(bypassProxy: Boolean = true) {
         }
     }
 
-    /**
-     * 获取用户收藏的歌单
-     * @param userId 用户 ID；传 0 时自动使用当前登录用户 ID
-     * @param offset 偏移量，分页用
-     * @param limit  每页返回数量
-     */
     @Throws(IOException::class)
     fun getUserSubscribedPlaylists(userId: Long, offset: Int = 0, limit: Int = 1000): String {
         val uid = if (userId == 0L) getCurrentUserId() else userId
@@ -481,10 +429,6 @@ class NeteaseClient(bypassProxy: Boolean = true) {
         }
     }
 
-    /**
-     * 获取“我喜欢的音乐”歌单 ID
-     * @param userId 用户 ID；传 0 时自动使用当前登录用户 ID
-     */
     @Throws(IOException::class)
     fun getLikedPlaylistId(userId: Long): String {
         val uid = if (userId == 0L) getCurrentUserId() else userId
@@ -513,10 +457,6 @@ class NeteaseClient(bypassProxy: Boolean = true) {
         }
     }
 
-    /**
-     * 获取用户喜欢的所有歌曲 ID
-     * @param userId 用户 ID；传 0 时自动使用当前登录用户 ID
-     */
     @Throws(IOException::class)
     fun getUserLikedSongIds(userId: Long): String {
         val uid = if (userId == 0L) getCurrentUserId() else userId
@@ -525,12 +465,6 @@ class NeteaseClient(bypassProxy: Boolean = true) {
         return request(url, params, CryptoMode.WEAPI, "POST", usePersistedCookies = true)
     }
 
-    /**
-     * 喜欢/取消喜欢一首歌
-     * @param songId 歌曲 ID
-     * @param like   是否喜欢（true=喜欢, false=取消喜欢）
-     * @param time   可选参数，时间戳
-     */
     @Throws(IOException::class)
     fun likeSong(songId: Long, like: Boolean = true, time: Long? = null): String {
         val params = mutableMapOf<String, Any>(
@@ -541,17 +475,11 @@ class NeteaseClient(bypassProxy: Boolean = true) {
         return callWeApi("/song/like", params, usePersistedCookies = true)
     }
 
-    /**
-     * 获取当前登录用户的账户信息（包含 userId）
-     */
     @Throws(IOException::class)
     fun getCurrentUserAccount(): String {
         return callWeApi("/w/nuser/account/get", emptyMap(), usePersistedCookies = true)
     }
 
-    /**
-     * 获取当前登录用户的 userId
-     */
     @Throws(IOException::class)
     fun getCurrentUserId(): Long {
         val raw = getCurrentUserAccount()

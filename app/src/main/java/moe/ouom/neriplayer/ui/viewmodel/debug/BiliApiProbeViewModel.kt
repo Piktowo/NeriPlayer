@@ -1,28 +1,5 @@
 package moe.ouom.neriplayer.ui.viewmodel.debug
 
-/*
- * NeriPlayer - A unified Android player for streaming music and videos from multiple online platforms.
- * Copyright (C) 2025-2025 NeriPlayer developers
- * https://github.com/cwuom/NeriPlayer
- *
- * This software is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
- *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software.
- * If not, see <https://www.gnu.org/licenses/>.
- *
- * File: moe.ouom.neriplayer.ui.viewmodel/BiliApiProbeViewModel
- * Created: 2025/8/14
- */
-
 import android.app.Application
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -47,7 +24,7 @@ data class BiliProbeUiState(
     val keyword: String = "",
     val bvid: String = "",
     val cid: String = "",
-    val page: String = "1", // 新增 page 字段
+    val page: String = "1",
     val upMid: String = "",
     val mediaId: String = ""
 )
@@ -58,17 +35,15 @@ class BiliApiProbeViewModel(app: Application) : AndroidViewModel(app) {
     private val _ui = MutableStateFlow(BiliProbeUiState())
     val ui: StateFlow<BiliProbeUiState> = _ui
 
-    // 输入变更
     fun onKeywordChange(s: String) { _ui.value = _ui.value.copy(keyword = s) }
     fun onBvidChange(s: String) { _ui.value = _ui.value.copy(bvid = s) }
     fun onCidChange(s: String) { _ui.value = _ui.value.copy(cid = s.filter { it.isDigit() }) }
-    fun onPageChange(s: String) { _ui.value = _ui.value.copy(page = s.filter { it.isDigit() }) } // 新增 page 变更
+    fun onPageChange(s: String) { _ui.value = _ui.value.copy(page = s.filter { it.isDigit() }) }
     fun onUpMidChange(s: String) { _ui.value = _ui.value.copy(upMid = s.filter { it.isDigit() }) }
     fun onMediaIdChange(s: String) { _ui.value = _ui.value.copy(mediaId = s.filter { it.isDigit() }) }
 
     fun clearPreview() { _ui.value = _ui.value.copy(lastJsonPreview = "", lastMessage = "") }
 
-    // 工具
     private fun copyToClipboard(label: String, text: String) {
         val cm = getApplication<Application>().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         cm.setPrimaryClip(ClipData.newPlainText(label, text))
@@ -99,7 +74,6 @@ class BiliApiProbeViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    // 根据 BVID 和 page 获取 CID 的方法
     private suspend fun getCidByBvidAndPage(bvid: String, page: Int): Long {
         val pages = client.getVideoPageList(bvid = bvid)
         val targetPage = pages.find { it.page == page }
@@ -108,7 +82,6 @@ class BiliApiProbeViewModel(app: Application) : AndroidViewModel(app) {
         return targetPage.cid
     }
 
-    // 根据 AID 和 page 获取 CID 的方法
     private suspend fun getCidByAidAndPage(aid: Long, page: Int): Long {
         val pages = client.getVideoPageList(aid = aid)
         val targetPage = pages.find { it.page == page }
@@ -117,7 +90,6 @@ class BiliApiProbeViewModel(app: Application) : AndroidViewModel(app) {
         return targetPage.cid
     }
 
-    // 具体接口
     fun searchAndCopy() = launchAndCopy("search") {
         val kw = ui.value.keyword.ifBlank { "bilibili" }
         val page = 1
@@ -182,22 +154,20 @@ class BiliApiProbeViewModel(app: Application) : AndroidViewModel(app) {
         }.toString()
     }
 
-    // 支持通过 page 自动获取 cid
     fun playInfoByBvidCidAndCopy() = launchAndCopy("playinfo_by_bvid_cid") {
         val bvid = ui.value.bvid
         val cid = if (ui.value.cid.isNotBlank()) {
             ui.value.cid.toLongOrNull() ?: 0L
         } else {
-            // 如果没有提供 cid，使用 page 获取
+
             val page = ui.value.page.toIntOrNull() ?: 1
             getCidByBvidAndPage(bvid, page)
         }
         val info = client.getPlayInfoByBvid(bvid, cid)
-        // 直接返回原始 JSON
+
         info.raw.toString()
     }
 
-    // 通过 page 获取播放信息
     fun playInfoByBvidPageAndCopy() = launchAndCopy("playinfo_by_bvid_page") {
         val bvid = ui.value.bvid
         val page = ui.value.page.toIntOrNull() ?: 1
@@ -283,7 +253,6 @@ class BiliApiProbeViewModel(app: Application) : AndroidViewModel(app) {
         }.toString()
     }
 
-    // 支持通过 avid+page 获取 cid
     fun playInfoByAvidCidAndCopy() = launchAndCopy("playinfo_by_avid_cid") {
         val avid = ui.value.bvid.removePrefix("av").toLongOrNull()
             ?: throw IllegalArgumentException("请输入有效 avid（数字）到 BV 输入框")
@@ -291,7 +260,7 @@ class BiliApiProbeViewModel(app: Application) : AndroidViewModel(app) {
         val cid = if (ui.value.cid.isNotBlank()) {
             ui.value.cid.toLongOrNull() ?: 0L
         } else {
-            // 如果没有提供 cid，使用 page 获取
+
             val page = ui.value.page.toIntOrNull() ?: 1
             getCidByAidAndPage(avid, page)
         }
@@ -300,13 +269,12 @@ class BiliApiProbeViewModel(app: Application) : AndroidViewModel(app) {
         info.raw.toString()
     }
 
-    // 支持通过 page 自动获取 cid
     fun allAudioStreamsByBvidCidAndCopy() = launchAndCopy("all_audio_streams_by_bvid_cid") {
         val bvid = ui.value.bvid
         val cid = if (ui.value.cid.isNotBlank()) {
             ui.value.cid.toLongOrNull() ?: 0L
         } else {
-            // 如果没有提供 cid，使用 page 获取
+
             val page = ui.value.page.toIntOrNull() ?: 1
             getCidByBvidAndPage(bvid, page)
         }
@@ -318,14 +286,13 @@ class BiliApiProbeViewModel(app: Application) : AndroidViewModel(app) {
                 put("id", a.id)
                 put("mime", a.mimeType)
                 put("kbps", a.bitrateKbps)
-                put("qualityTag", a.qualityTag)   // null|dolby|hires
+                put("qualityTag", a.qualityTag)
                 put("url", a.url)
             })
         }
         JSONObject().put("code", 0).put("audios", arr).toString()
     }
 
-    // 通过 page 获取音频流
     fun allAudioStreamsByBvidPageAndCopy() = launchAndCopy("all_audio_streams_by_bvid_page") {
         val bvid = ui.value.bvid
         val page = ui.value.page.toIntOrNull() ?: 1
@@ -338,7 +305,7 @@ class BiliApiProbeViewModel(app: Application) : AndroidViewModel(app) {
                 put("id", a.id)
                 put("mime", a.mimeType)
                 put("kbps", a.bitrateKbps)
-                put("qualityTag", a.qualityTag)   // null|dolby|hires
+                put("qualityTag", a.qualityTag)
                 put("url", a.url)
             })
         }
@@ -350,13 +317,12 @@ class BiliApiProbeViewModel(app: Application) : AndroidViewModel(app) {
         }.toString()
     }
 
-    // 支持通过 page 自动获取 cid
     fun mp4DurlByBvidCidAndCopy() = launchAndCopy("mp4_durl_by_bvid_cid") {
         val bvid = ui.value.bvid
         val cid = if (ui.value.cid.isNotBlank()) {
             ui.value.cid.toLongOrNull() ?: 0L
         } else {
-            // 如果没有提供 cid，使用 page 获取
+
             val page = ui.value.page.toIntOrNull() ?: 1
             getCidByBvidAndPage(bvid, page)
         }
@@ -382,7 +348,6 @@ class BiliApiProbeViewModel(app: Application) : AndroidViewModel(app) {
         JSONObject().put("code", info.code).put("message", info.message).put("durl", arr).toString()
     }
 
-    // 通过 page 获取 MP4 直链
     fun mp4DurlByBvidPageAndCopy() = launchAndCopy("mp4_durl_by_bvid_page") {
         val bvid = ui.value.bvid
         val page = ui.value.page.toIntOrNull() ?: 1

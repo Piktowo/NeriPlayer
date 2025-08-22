@@ -12,30 +12,6 @@ import javax.crypto.Cipher
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
-/*
- * NeriPlayer - A unified Android player for streaming music and videos from multiple online platforms.
- * Copyright (C) 2025-2025 NeriPlayer developers
- * https://github.com/cwuom/NeriPlayer
- *
- * This software is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
- *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software.
- * If not, see <https://www.gnu.org/licenses/>.
- *
- * File: moe.ouom.neriplayer.core.api.netease/NeteaseCrypto
- * Created: 2025/8/10
- */
-
-/** 加解密工具 */
 object NeteaseCrypto {
     private const val base62 = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
     private const val presetKey = "0CoJUm6Qyw8W8jud"
@@ -117,12 +93,11 @@ object NeteaseCrypto {
             }
             else -> throw IllegalArgumentException("未知 AES 模式: $mode")
         }
-        // PKCS#7 去填充
+
         val pad = plain.last().toInt()
         return plain.copyOfRange(0, plain.size - pad)
     }
 
-    /** RSA 加密随机密钥，使用与官方客户端一致的无填充算法  */
     private fun rsaEncrypt(text: String): String {
         return try {
             val cleanedKey = publicKeyPem
@@ -146,7 +121,6 @@ object NeteaseCrypto {
             throw RuntimeException("RSA 加密失败", e)
         }
     }
-
 
     fun md5Hex(data: String): String {
         val md = MessageDigest.getInstance("MD5")

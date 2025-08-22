@@ -1,28 +1,5 @@
 package moe.ouom.neriplayer.ui.screen.playlist
 
-/*
- * NeriPlayer - A unified Android player for streaming music and videos from multiple online platforms.
- * Copyright (C) 2025-2025 NeriPlayer developers
- * https://github.com/cwuom/NeriPlayer
- *
- * This software is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
- *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software.
- * If not, see <https://www.gnu.org/licenses/>.
- *
- * File: moe.ouom.neriplayer.ui.screen.playlist/PlaylistDetailScreen
- * Created: 2025/8/10
- */
-
 import android.app.Application
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -146,7 +123,7 @@ fun PlaylistDetailScreen(
             }
         }
     )
-    
+
     val downloadManager: DownloadManagerViewModel = viewModel(
         factory = viewModelFactory {
             initializer {
@@ -165,7 +142,6 @@ fun PlaylistDetailScreen(
 
     LaunchedEffect(playlist.id) { vm.start(playlist) }
 
-    // 多选 & 导出到本地歌单
     val repo = remember(context) { LocalPlaylistRepository.getInstance(context) }
     val allPlaylists by repo.playlists.collectAsState()
     var selectionMode by remember { mutableStateOf(false) }
@@ -192,7 +168,7 @@ fun PlaylistDetailScreen(
             color = Color.Transparent
         ) {
             Column {
-                // 顶部栏：普通模式 / 多选模式
+
                 if (!selectionMode) {
                     TopAppBar(
                         title = {
@@ -244,12 +220,12 @@ fun PlaylistDetailScreen(
                                 Icon(Icons.AutoMirrored.Outlined.PlaylistAdd, contentDescription = "导出到歌单")
                             }
                             HapticIconButton(
-                                onClick = { 
+                                onClick = {
                                     if (selectedIds.isNotEmpty()) {
-                                        // 先立即退出多选，避免组合离开导致作用域取消
+
                                         exitSelection()
                                         val selectedSongs = ui.tracks.filter { selectedIds.contains(it.id) }
-                                        // 开始批量下载（ViewModel 使用应用作用域）
+
                                         downloadManager.startBatchDownload(context, selectedSongs)
                                     }
                                 },
@@ -362,7 +338,6 @@ fun PlaylistDetailScreen(
                             }
                         }
 
-                        // 状态块
                         when {
                             ui.loading && ui.tracks.isEmpty() -> {
                                 item {
@@ -446,7 +421,6 @@ fun PlaylistDetailScreen(
                 }
             }
 
-            // 导出面板 //
             if (showExportSheet) {
                 ModalBottomSheet(
                     onDismissRequest = { showExportSheet = false },
@@ -463,7 +437,7 @@ fun PlaylistDetailScreen(
                                         .fillMaxWidth()
                                         .padding(vertical = 10.dp)
                                         .combinedClickable(onClick = {
-                                            // 倒序导出
+
                                             val songs = ui.tracks
                                                 .asReversed()
                                                 .filter { selectedIds.contains(it.id) }
@@ -504,7 +478,7 @@ fun PlaylistDetailScreen(
                                 onClick = {
                                     val name = newName.trim()
                                     if (name.isBlank()) return@HapticTextButton
-                                    // 倒序导出
+
                                     val songs = ui.tracks
                                         .asReversed()
                                         .filter { selectedIds.contains(it.id) }
@@ -523,13 +497,12 @@ fun PlaylistDetailScreen(
                     }
                 }
             }
-            // 允许返回键优先退出多选
+
             BackHandler(enabled = selectionMode) { exitSelection() }
         }
     }
 }
 
-/* 小组件 */
 @Composable
 private fun RetryChip(onClick: () -> Unit) {
     Card(
@@ -644,8 +617,7 @@ private fun SongRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        
-        // 更多操作菜单
+
         if (!selectionMode) {
             var showMoreMenu by remember { mutableStateOf(false) }
             Box {
@@ -658,7 +630,7 @@ private fun SongRow(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                
+
                 DropdownMenu(
                     expanded = showMoreMenu,
                     onDismissRequest = { showMoreMenu = false }

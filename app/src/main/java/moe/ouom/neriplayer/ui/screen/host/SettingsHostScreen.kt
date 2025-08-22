@@ -1,28 +1,5 @@
 package moe.ouom.neriplayer.ui.screen.host
 
-/*
- * NeriPlayer - A unified Android player for streaming music and videos from multiple online platforms.
- * Copyright (C) 2025-2025 NeriPlayer developers
- * https://github.com/cwuom/NeriPlayer
- *
- * This software is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
- *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software.
- * If not, see <https://www.gnu.org/licenses/>.
- *
- * File: moe.ouom.neriplayer.ui.screen.host/SettingsHostScreen
- * Created: 2025/1/17
- */
-
 import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
@@ -74,13 +51,12 @@ fun SettingsHostScreen(
     onBackgroundImageAlphaChange: (Float) -> Unit,
 ) {
     var showDownloadManager by rememberSaveable { mutableStateOf(false) }
-    
-    // 保存设置页面的滚动状态，使用正确的Saver
+
     val settingsListSaver: Saver<LazyListState, *> = LazyListState.Saver
     val settingsListState = rememberSaveable(saver = settingsListSaver) {
         LazyListState(firstVisibleItemIndex = 0, firstVisibleItemScrollOffset = 0)
     }
-    
+
     BackHandler(enabled = showDownloadManager) { showDownloadManager = false }
 
     Surface(color = Color.Transparent) {

@@ -1,29 +1,5 @@
 package moe.ouom.neriplayer.data
 
-/*
- * NeriPlayer - A unified Android player for streaming music and videos from multiple online platforms.
- * Copyright (C) 2025-2025 NeriPlayer developers
- * https://github.com/cwuom/NeriPlayer
- *
- * This software is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
- *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software.
- * If not, see <https://www.gnu.org/licenses/>.
- *
- * File: moe.ouom.neriplayer.data/SettingsDataStore
- * Created: 2025/8/8
- */
-
-
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
@@ -55,18 +31,17 @@ object SettingsKeys {
     val BACKGROUND_IMAGE_ALPHA = floatPreferencesKey("background_image_alpha")
 }
 
-
 object ThemeDefaults {
     const val DEFAULT_SEED_COLOR_HEX = "0061A4"
     val PRESET_COLORS = listOf(
-        "0061A4", // 科技·蓝
-        "6750A4", // 柔和·紫
-        "B3261E", // 热情·红
-        "C425A8", // 浪漫·粉
-        "00897B", // 森系·青
-        "388E3C", // 活力·绿
-        "FBC02D", // 明亮·黄
-        "E65100", // 温暖·橙
+        "0061A4",
+        "6750A4",
+        "B3261E",
+        "C425A8",
+        "00897B",
+        "388E3C",
+        "FBC02D",
+        "E65100",
     )
 }
 class SettingsRepository(private val context: Context) {
@@ -111,7 +86,7 @@ class SettingsRepository(private val context: Context) {
 
     val disclaimerAcceptedFlow: Flow<Boolean?> =
         flow {
-            emit(null) // 加载态
+            emit(null)
             val realFlow: Flow<Boolean> =
                 context.dataStore.data.map { prefs ->
                     prefs[SettingsKeys.DISCLAIMER_ACCEPTED_V2] ?: false
@@ -176,7 +151,6 @@ class SettingsRepository(private val context: Context) {
         context.dataStore.edit { it[SettingsKeys.BACKGROUND_IMAGE_ALPHA] = alpha }
     }
 
-    /** 备用：一次性读取（非 Compose 场景） */
     suspend fun isDisclaimerAcceptedFirst(): Boolean {
         val prefs = context.dataStore.data.first()
         return prefs[SettingsKeys.DISCLAIMER_ACCEPTED_V2] ?: false

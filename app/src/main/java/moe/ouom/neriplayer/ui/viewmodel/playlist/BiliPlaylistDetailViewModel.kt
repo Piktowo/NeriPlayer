@@ -1,28 +1,5 @@
 package moe.ouom.neriplayer.ui.viewmodel.playlist
 
-/*
- * NeriPlayer - A unified Android player for streaming music and videos from multiple online platforms.
- * Copyright (C) 2025-2025 NeriPlayer developers
- * https://github.com/cwuom/NeriPlayer
- *
- * This software is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
- *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software.
- * If not, see <https://www.gnu.org/licenses/>.
- *
- * File: moe.ouom.neriplayer.ui.viewmodel.playlist/BiliPlaylistDetailViewModel
- * Created: 2025/8/15
- */
-
 import android.app.Application
 import android.os.Parcelable
 import androidx.lifecycle.AndroidViewModel
@@ -38,10 +15,9 @@ import moe.ouom.neriplayer.core.di.AppContainer
 import moe.ouom.neriplayer.ui.viewmodel.tab.BiliPlaylist
 import java.io.IOException
 
-/** Bilibili 视频条目数据模型 */
 @Parcelize
 data class BiliVideoItem(
-    val id: Long, // avid
+    val id: Long,
     val bvid: String,
     val title: String,
     val uploader: String,
@@ -49,7 +25,6 @@ data class BiliVideoItem(
     val durationSec: Int
 ) : Parcelable
 
-/** Bilibili 收藏夹详情页 UI 状态 */
 data class BiliPlaylistDetailUiState(
     val loading: Boolean = true,
     val error: String? = null,
@@ -81,12 +56,6 @@ class BiliPlaylistDetailViewModel(application: Application) : AndroidViewModel(a
         uiState.value.header?.let { start(it) }
     }
 
-
-    /**
-     * 获取单个视频的详细信息，包括分P列表
-     * @param bvid 视频的 BV 号
-     * @return 包含所有分P信息的 VideoBasicInfo 对象
-     */
     suspend fun getVideoInfo(bvid: String): BiliClient.VideoBasicInfo {
         return withContext(Dispatchers.IO) {
             client.getVideoBasicInfoByBvid(bvid)
@@ -102,7 +71,7 @@ class BiliPlaylistDetailViewModel(application: Application) : AndroidViewModel(a
                 }
 
                 val videos = items.mapNotNull {
-                    // 仅保留视频类型的内容
+
                     if (it.type == 2) {
                         BiliVideoItem(
                             id = it.id,
@@ -136,17 +105,10 @@ class BiliPlaylistDetailViewModel(application: Application) : AndroidViewModel(a
         }
     }
 
-    /**
-     * 将 Bilibili 视频的分P转换为通用的 SongItem
-     * @param page 分P信息
-     * @param basicInfo 视频的基本信息
-     * @param coverUrl 视频封面
-     * @return 转换后的 SongItem
-     */
     fun toSongItem(page: BiliClient.VideoPage, basicInfo: BiliClient.VideoBasicInfo, coverUrl: String): SongItem {
         return SongItem(
-            id = basicInfo.aid * 10000 + page.page, // 使用 avid 和 page 组合成唯一 ID
-            name = page.part, // 直接使用分P的标题作为歌曲名
+            id = basicInfo.aid * 10000 + page.page,
+            name = page.part,
             artist = basicInfo.ownerName,
             album = "Bilibili",
             durationMs = page.durationSec * 1000L,

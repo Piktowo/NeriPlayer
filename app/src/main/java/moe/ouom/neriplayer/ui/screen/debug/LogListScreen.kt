@@ -1,28 +1,5 @@
 package moe.ouom.neriplayer.ui.screen.debug
 
-/*
- * NeriPlayer - A unified Android player for streaming music and videos from multiple online platforms.
- * Copyright (C) 2025-2025 NeriPlayer developers
- * https://github.com/cwuom/NeriPlayer
- *
- * This software is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
- *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software.
- * If not, see <https://www.gnu.org/licenses/>.
- *
- * File: moe.ouom.neriplayer.ui.screen.debug/LogListScreen
- * Created: 2025/8/17
- */
-
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -85,7 +62,7 @@ fun LogListScreen(
                                     }
                                 }
                             }
-                            // 更新UI
+
                             logFilesState.value = emptyList()
                             snackbarHostState.showSnackbar("已清空 $clearedCount 个日志文件")
                         }
@@ -146,6 +123,6 @@ fun LogListScreen(
 
 private fun formatFileMeta(file: File): String {
     val date = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date(file.lastModified()))
-    val size = file.length() / 1024 // KB
+    val size = file.length() / 1024
     return "$date - ${size}KB"
 }

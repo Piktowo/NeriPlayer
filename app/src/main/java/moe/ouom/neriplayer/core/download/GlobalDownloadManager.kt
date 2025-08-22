@@ -65,7 +65,6 @@ object GlobalDownloadManager {
     }
 }
 
-
     private fun updateDownloadProgress(progress: AudioDownloadManager.DownloadProgress) {
         _downloadTasks.value = _downloadTasks.value.map { task ->
             if (task.status == DownloadStatus.DOWNLOADING) {
@@ -348,7 +347,6 @@ object GlobalDownloadManager {
     fun removeDownloadTask(songId: Long) {
         _downloadTasks.value = _downloadTasks.value.filter { it.song.id != songId }
     }
-
 
 data class DownloadedSong(
     val id: Long,

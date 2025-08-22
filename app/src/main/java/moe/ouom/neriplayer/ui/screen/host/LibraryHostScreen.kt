@@ -1,28 +1,5 @@
 package moe.ouom.neriplayer.ui.screen.host
 
-/*
- * NeriPlayer - A unified Android player for streaming music and videos from multiple online platforms.
- * Copyright (C) 2025-2025 NeriPlayer developers
- * https://github.com/cwuom/NeriPlayer
- *
- * This software is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
- *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software.
- * If not, see <https://www.gnu.org/licenses/>.
- *
- * File: moe.ouom.neriplayer.ui.screen.host/LibraryHostScreen
- * Created: 2025/1/17
- */
-
 import android.os.Parcelable
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
@@ -71,11 +48,10 @@ fun LibraryHostScreen(
     onPlayParts: (BiliClient.VideoBasicInfo, Int, String) -> Unit = { _, _, _ -> }
 ) {
     var selected by rememberSaveable { mutableStateOf<LibrarySelectedItem?>(null) }
-    // 保存当前选中的标签页索引
+
     var selectedTabIndex by rememberSaveable { mutableStateOf(0) }
     BackHandler(enabled = selected != null) { selected = null }
 
-    // 保存各个列表的滚动状态
     val localListSaver: Saver<LazyListState, *> = LazyListState.Saver
     val neteaseListSaver: Saver<LazyListState, *> = LazyListState.Saver
     val biliListSaver: Saver<LazyListState, *> = LazyListState.Saver
@@ -116,14 +92,14 @@ fun LibraryHostScreen(
                     neteaseListState = neteaseListState,
                     biliListState = biliListState,
                     qqMusicListState = qqMusicListState,
-                    onLocalPlaylistClick = { playlist -> 
-                        selected = LibrarySelectedItem.Local(playlist.id) 
+                    onLocalPlaylistClick = { playlist ->
+                        selected = LibrarySelectedItem.Local(playlist.id)
                     },
-                    onNeteasePlaylistClick = { playlist -> 
-                        selected = LibrarySelectedItem.Netease(playlist) 
+                    onNeteasePlaylistClick = { playlist ->
+                        selected = LibrarySelectedItem.Netease(playlist)
                     },
-                    onBiliPlaylistClick = { playlist -> 
-                        selected = LibrarySelectedItem.Bili(playlist) 
+                    onBiliPlaylistClick = { playlist ->
+                        selected = LibrarySelectedItem.Bili(playlist)
                     }
                 )
             } else {

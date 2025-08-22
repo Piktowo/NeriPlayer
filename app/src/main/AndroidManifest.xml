@@ -47,7 +47,7 @@
             android:foregroundServiceType="mediaPlayback"
             />
         
-        <!-- FileProvider for sharing downloaded music files -->
+        
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

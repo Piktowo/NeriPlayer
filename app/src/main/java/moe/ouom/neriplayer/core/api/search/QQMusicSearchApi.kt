@@ -1,28 +1,5 @@
 package moe.ouom.neriplayer.core.api.search
 
-/*
- * NeriPlayer - A unified Android player for streaming music and videos from multiple online platforms.
- * Copyright (C) 2025-2025 NeriPlayer developers
- * https://github.com/cwuom/NeriPlayer
- *
- * This software is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
- *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software.
- * If not, see <https://www.gnu.org/licenses/>.
- *
- * File: moe.ouom.neriplayer.core.api.search/QQMusicSearchApi
- * Created: 2025/8/17
- */
-
 import android.annotation.SuppressLint
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
@@ -50,7 +27,7 @@ import moe.ouom.neriplayer.core.di.AppContainer
     val singer: List<QQMusicArtist>,
     @SerialName("albummid") val albumMid: String?,
     @SerialName("albumname") val albumName: String?,
-    val interval: Long // 歌曲时长（秒）
+    val interval: Long
 )
 
 @Serializable private data class QQMusicArtist(val name: String)
@@ -69,7 +46,6 @@ import moe.ouom.neriplayer.core.di.AppContainer
 @Serializable private data class QQMusicAlbum(val name: String, val mid: String)
 
 @Serializable private data class QQMusicLyricResponse(val lyric: String?)
-
 
 class QQMusicSearchApi : SearchApi {
 
@@ -108,7 +84,7 @@ class QQMusicSearchApi : SearchApi {
         }
     }
 
-    override suspend fun getSongInfo(id: String): SongDetails { // id is songMid
+    override suspend fun getSongInfo(id: String): SongDetails {
         return withContext(Dispatchers.IO) {
             val detailRequestData = JSONObject().put(
                 "songinfo", JSONObject()

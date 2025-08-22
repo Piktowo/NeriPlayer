@@ -1,28 +1,5 @@
 package moe.ouom.neriplayer.ui.viewmodel.debug
 
-/*
- * NeriPlayer - A unified Android player for streaming music and videos from multiple online platforms.
- * Copyright (C) 2025-2025 NeriPlayer developers
- * https://github.com/cwuom/NeriPlayer
- *
- * This software is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
- *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software.
- * If not, see <https://www.gnu.org/licenses/>.
- *
- * File: moe.ouom.neriplayer.ui.viewmodel/NeteaseAuthViewModel
- * Created: 2025/8/9
- */
-
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -47,7 +24,7 @@ data class NeteaseAuthUiState(
 sealed interface NeteaseAuthEvent {
     data class ShowSnack(val message: String) : NeteaseAuthEvent
     data class AskConfirmSend(val masked: String) : NeteaseAuthEvent
-    /** 登录成功后弹窗展示 Cookies */
+
     data class ShowCookies(val cookies: Map<String, String>) : NeteaseAuthEvent
     data object LoginSuccess : NeteaseAuthEvent
 }
@@ -93,7 +70,6 @@ class NeteaseAuthViewModel(app: Application) : AndroidViewModel(app) {
         _events.tryEmit(NeteaseAuthEvent.AskConfirmSend(maskPhone(phone)))
     }
 
-    /** 发送验证码 */
     fun sendCaptcha(ctcode: String = "86") {
         val phone = _uiState.value.phone.trim()
         if (!isValidPhone(phone)) {
@@ -122,7 +98,6 @@ class NeteaseAuthViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** 验证码一键登录 */
     fun loginByCaptcha(countryCode: String = "86") {
         val phone = _uiState.value.phone.trim()
         val captcha = _uiState.value.captcha.trim()
@@ -139,7 +114,7 @@ class NeteaseAuthViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.value = _uiState.value.copy(loggingIn = true)
             try {
-                // 校验验证码
+
                 val verifyResp = api.verifyCaptcha(phone, captcha, countryCode.toInt())
                 val verifyOk = JSONObject(verifyResp).optInt("code", -1) == 200
                 if (!verifyOk) {
@@ -148,7 +123,6 @@ class NeteaseAuthViewModel(app: Application) : AndroidViewModel(app) {
                     return@launch
                 }
 
-                // 登录
                 val loginResp = api.loginByCaptcha(
                     phone = phone,
                     captcha = captcha,
@@ -201,7 +175,7 @@ class NeteaseAuthViewModel(app: Application) : AndroidViewModel(app) {
 
     fun importCookiesFromMap(map: Map<String, String>) {
         viewModelScope.launch(Dispatchers.IO) {
-            // 补齐关键字段
+
             val m = map.toMutableMap()
             m.putIfAbsent("os", "pc")
             m.putIfAbsent("appver", "8.10.35")
@@ -218,7 +192,6 @@ class NeteaseAuthViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** 接收原始 Cookie 字符串：MUSIC_U=...; __csrf=...; ... */
     fun importCookiesFromRaw(raw: String) {
         val parsed = linkedMapOf<String, String>()
         raw.split(';')

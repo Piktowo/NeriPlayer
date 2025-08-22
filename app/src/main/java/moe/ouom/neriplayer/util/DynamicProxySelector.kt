@@ -6,11 +6,6 @@ import java.net.ProxySelector
 import java.net.SocketAddress
 import java.net.URI
 
-/**
- * A ProxySelector that can be toggled at runtime to bypass the system proxy.
- * When [bypassProxy] is true, all requests use Proxy.NO_PROXY.
- * When false, it delegates to the system default ProxySelector.
- */
 object DynamicProxySelector : ProxySelector() {
     @Volatile
     var bypassProxy: Boolean = true
@@ -27,5 +22,4 @@ object DynamicProxySelector : ProxySelector() {
         systemDefault?.connectFailed(uri, sa, ioe)
     }
 }
-
 

@@ -1,28 +1,5 @@
 package moe.ouom.neriplayer.ui.screen
 
-/*
- * NeriPlayer - A unified Android player for streaming music and videos from multiple online platforms.
- * Copyright (C) 2025-2025 NeriPlayer developers
- * https://github.com/cwuom/NeriPlayer
- *
- * This software is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
- *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software.
- * If not, see <https://www.gnu.org/licenses/>.
- *
- * File: moe.ouom.neriplayer.ui.screen/NowPlayingScreen
- * Created: 2025/8/8
- */
-
 import android.content.Context
 import android.content.Intent
 import android.media.AudioDeviceCallback
@@ -175,15 +152,12 @@ fun NowPlayingScreen(
     val currentPosition by PlayerManager.playbackPositionFlow.collectAsState()
     val durationMs = currentSong?.durationMs ?: 0L
 
-    // 订阅当前播放链接
     val currentMediaUrl by PlayerManager.currentMediaUrlFlow.collectAsState()
     val isFromNetease = currentMediaUrl?.contains("music.126.net", ignoreCase = true) == true
     val isFromBili = currentMediaUrl?.contains("bilivideo.", ignoreCase = true) == true
 
-    // 歌单&收藏
     val playlists by PlayerManager.playlistsFlow.collectAsState()
 
-    // 点击即切换，回流后撤销覆盖
     var favOverride by remember(currentSong) { mutableStateOf<Boolean?>(null) }
     val isFavoriteComputed = remember(currentSong, playlists) {
         val song = currentSong
@@ -196,7 +170,6 @@ fun NowPlayingScreen(
     }
     val isFavorite = favOverride ?: isFavoriteComputed
 
-    // 缩放动画
     var bumpKey by remember(currentSong?.id) { mutableIntStateOf(0) }
     if (isFavorite) 1.0f else 1.0f
     val scale by animateFloatAsState(
@@ -215,23 +188,18 @@ fun NowPlayingScreen(
     var showQueueSheet by remember { mutableStateOf(false) }
     val addSheetState = rememberModalBottomSheetState()
     val queueSheetState = rememberModalBottomSheetState()
-    
-    // Snackbar状态
+
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // 是否拖拽进度条
     var isUserDraggingSlider by remember(currentSong?.id) { mutableStateOf(false) }
     var sliderPosition by remember(currentSong?.id) {
         mutableFloatStateOf(PlayerManager.playbackPositionFlow.value.toFloat())
     }
 
-    // 内容的进入动画
     var contentVisible by remember { mutableStateOf(false) }
 
-    // 控制音量弹窗的显示
     var showVolumeSheet by remember { mutableStateOf(false) }
     val volumeSheetState = rememberModalBottomSheetState()
-
 
     var lyrics by remember(currentSong?.id) { mutableStateOf<List<LyricEntry>>(emptyList()) }
 
@@ -240,7 +208,7 @@ fun NowPlayingScreen(
     LaunchedEffect(currentSong?.id, currentSong?.matchedLyric, isFromNetease) {
         val song = currentSong
         lyrics = when {
-            // 优先使用匹配到的歌词
+
             song?.matchedLyric != null -> {
                 if (song.matchedLyric.contains(Regex("""\[\d+,\s*\d+]\(\d+,"""))) {
                     parseNeteaseYrc(song.matchedLyric)
@@ -260,7 +228,6 @@ fun NowPlayingScreen(
     LaunchedEffect(Unit) { contentVisible = true }
     LaunchedEffect(currentPosition) { if (!isUserDraggingSlider) sliderPosition = currentPosition.toFloat() }
 
-    // 当仓库回流或歌曲切换时，撤销本地乐观覆盖，用真实状态对齐
     LaunchedEffect(playlists, currentSong?.id) { favOverride = null }
 
     CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurface) {
@@ -291,10 +258,10 @@ fun NowPlayingScreen(
                         } else {
                             PlayerManager.removeCurrentFromFavorites()
                         }
-                        // 触发一次弹跳
+
                         bumpKey++
                     }) {
-                        // 图标切换 和 scale/fade 动画
+
                         AnimatedContent(
                             targetState = isFavorite,
                             transitionSpec = {
@@ -323,7 +290,7 @@ fun NowPlayingScreen(
                     if (showMoreOptions) {
                         MoreOptionsSheet(
                             viewModel = nowPlayingViewModel,
-                            originalSong = currentSong!!, // 此时 currentSong 必不为 null
+                            originalSong = currentSong!!,
                             queue = displayedQueue,
                             onDismiss = { showMoreOptions = false },
                             snackbarHostState = snackbarHostState
@@ -342,7 +309,6 @@ fun NowPlayingScreen(
 
             Spacer(Modifier.height(8.dp))
 
-            // 封面
             AnimatedVisibility(
                 visible = contentVisible,
                 modifier = Modifier.align(Alignment.CenterHorizontally),
@@ -370,7 +336,6 @@ fun NowPlayingScreen(
                         )
                     }
 
-                    // 右下角覆盖显示
                     if (isFromNetease) {
                         Row(
                             modifier = Modifier
@@ -519,7 +484,7 @@ fun NowPlayingScreen(
 
             if (lyrics.isNotEmpty()) {
                 Spacer(Modifier.weight(1f))
-                
+
                 val platformOffset = if (currentSong?.matchedLyricSource == MusicPlatform.QQ_MUSIC) {
                     500L
                 } else {
@@ -542,11 +507,8 @@ fun NowPlayingScreen(
                 )
             }
 
-
-            // 将下面的内容推到底部
             Spacer(modifier = Modifier.weight(1f))
 
-            // 底部操作栏
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -564,7 +526,6 @@ fun NowPlayingScreen(
             }
         }
 
-        // 音量控制弹窗
         if (showVolumeSheet) {
             ModalBottomSheet(
                 onDismissRequest = { showVolumeSheet = false },
@@ -574,7 +535,6 @@ fun NowPlayingScreen(
             }
         }
 
-        // 播放队列弹窗
         if (showQueueSheet) {
             val initialIndex = (currentIndexInDisplay - 4).coerceAtLeast(0)
             val listState = rememberLazyListState(initialFirstVisibleItemIndex = initialIndex)
@@ -607,7 +567,7 @@ fun NowPlayingScreen(
                                 Text(song.name, maxLines = 1)
                                 Text(song.artist, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                             }
-                            
+
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -615,8 +575,7 @@ fun NowPlayingScreen(
                                 if (index == currentIndexInDisplay) {
                                     Icon(Icons.Outlined.PlayArrow, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                                 }
-                                
-                                // 更多操作菜单
+
                                 var showMoreMenu by remember { mutableStateOf(false) }
                                 Box {
                                     IconButton(
@@ -628,7 +587,7 @@ fun NowPlayingScreen(
                                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
-                                    
+
                                     DropdownMenu(
                                         expanded = showMoreMenu,
                                         onDismissRequest = { showMoreMenu = false }
@@ -756,7 +715,6 @@ private fun MoreOptionsSheet(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
-    // 当弹窗打开时，如果需要，预填充搜索词
     LaunchedEffect(showSearchView) {
         if (showSearchView) {
             viewModel.prepareForSearch(originalSong.name)
@@ -817,35 +775,34 @@ private fun MoreOptionsSheet(
                                 val isFromBili = song.album.startsWith(PlayerManager.BILI_SOURCE_TAG)
 
                                 val url = if (isFromBili) {
-                                    // 筛选出队列中属于同一个B站视频的所有分P
+
                                     val videoParts = queue.filter {
                                         it.id == song.id && it.album.startsWith(PlayerManager.BILI_SOURCE_TAG)
                                     }
-                                    // 如果分 P 数量大于1，说明是多 P 视频
+
                                     if (videoParts.size > 1) {
-                                        // 找到当前分 P 在列表中的索引
+
                                         val pageIndex = videoParts.indexOfFirst {
-                                            // 使用包含 cid 的 album 字段进行精确匹配
+
                                             it.album == song.album
                                         }
                                         val pageNumber = pageIndex + 1
                                         if (pageIndex != -1) {
-                                            // 生成带分 P 参数的链接
+
                                             "https://www.bilibili.com/video/av${song.id}/?p=${pageNumber}"
                                         } else {
-                                            // 如果意外没找到，则回退到不带分P的链接
+
                                             "https://www.bilibili.com/video/av${song.id}"
                                         }
                                     } else {
-                                        // 单 P 视频
+
                                         "https://www.bilibili.com/video/av${song.id}"
                                     }
                                 } else {
-                                    // 其他来源的歌曲
+
                                     "https://music.163.com/#/song?id=${song.id}"
                                 }
 
-                                // 在分享文本中加入艺术家/UP主名称
                                 val shareText = "分享歌曲：${song.name} - ${song.artist}\n$url"
 
                                 val sendIntent: Intent = Intent().apply {
@@ -862,7 +819,7 @@ private fun MoreOptionsSheet(
                     }
                 }
                 "Search" -> {
-                    // 搜索界面
+
                     val searchState by viewModel.manualSearchState.collectAsState()
 
                     Column(
@@ -890,7 +847,6 @@ private fun MoreOptionsSheet(
                             }),
                         )
 
-                        // 平台切换
                         androidx.compose.material3.PrimaryTabRow(
                             selectedTabIndex = searchState.selectedPlatform.ordinal,
                             containerColor = Color.Transparent,
@@ -905,7 +861,6 @@ private fun MoreOptionsSheet(
                             }
                         }
 
-                        // 搜索结果区域
                         Box(Modifier.height(300.dp)) {
                             if (searchState.isLoading) {
                                 CircularProgressIndicator(Modifier.align(Alignment.Center))
@@ -951,8 +906,7 @@ private fun MoreOptionsSheet(
                     )
                 }
             }
-            
-            // Snackbar
+
             SnackbarHost(
                 hostState = snackbarHostState,
                 modifier = Modifier.padding(bottom = LocalMiniPlayerHeight.current)
@@ -1015,8 +969,8 @@ private fun LyricOffsetSheet(song: SongItem, onDismiss: () -> Unit) {
             text = "${if (currentOffset > 0) "+" else ""}${currentOffset} ms",
             style = MaterialTheme.typography.titleLarge.copy(fontFamily = FontFamily.Monospace),
             color = when {
-                currentOffset > 0 -> Color(0xFF388E3C) // 快了 绿色
-                currentOffset < 0 -> MaterialTheme.colorScheme.error // 慢了红色
+                currentOffset > 0 -> Color(0xFF388E3C)
+                currentOffset < 0 -> MaterialTheme.colorScheme.error
                 else -> LocalContentColor.current
             }
         )

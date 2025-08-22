@@ -1,28 +1,5 @@
 package moe.ouom.neriplayer.ui.screen.tab
 
-/*
- * NeriPlayer - A unified Android player for streaming music and videos from multiple online platforms.
- * Copyright (C) 2025-2025 NeriPlayer developers
- * https://github.com/cwuom/NeriPlayer
- *
- * This software is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
- *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software.
- * If not, see <https://www.gnu.org/licenses/>.
- *
- * File: moe.ouom.neriplayer.ui.screen.tab/LibraryScreen
- * Created: 2025/8/8
- */
-
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -120,17 +97,14 @@ fun LibraryScreen(
     val ui by vm.uiState.collectAsState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
-    // 使用rememberSaveable来保存当前选中的标签页索引
     var currentTabIndex by rememberSaveable { mutableStateOf(initialTabIndex) }
-    
-    // 使用rememberPagerState来管理页面状态，支持左右滑动
+
     val pagerState = rememberPagerState(
         initialPage = currentTabIndex,
         pageCount = { LibraryTab.entries.size }
     )
     val scope = rememberCoroutineScope()
 
-    // 当pagerState改变时，同步更新currentTabIndex并通知父组件
     LaunchedEffect(pagerState.currentPage) {
         currentTabIndex = pagerState.currentPage
         onTabIndexChange(pagerState.currentPage)
@@ -141,7 +115,7 @@ fun LibraryScreen(
             .fillMaxSize()
             .nestedScroll(scrollBehavior.nestedScrollConnection)
     ) {
-        // 大标题 AppBar
+
         LargeTopAppBar(
             title = { Text("媒体库") },
             scrollBehavior = scrollBehavior,
@@ -151,7 +125,6 @@ fun LibraryScreen(
             )
         )
 
-        // 顶部 Tabs
         ScrollableTabRow(
             selectedTabIndex = pagerState.currentPage,
             edgePadding = 16.dp,
@@ -162,7 +135,7 @@ fun LibraryScreen(
                 Tab(
                     selected = pagerState.currentPage == index,
                     onClick = {
-                        // 点击Tab时，使用协程来平滑滚动到对应页面
+
                         scope.launch {
                             pagerState.animateScrollToPage(index)
                         }
@@ -174,7 +147,6 @@ fun LibraryScreen(
             }
         }
 
-        // 使用HorizontalPager来支持左右滑动切换标签页
         HorizontalPager(
             state = pagerState,
             modifier = Modifier.fillMaxSize(),
@@ -201,9 +173,9 @@ fun LibraryScreen(
                     onClick = onBiliPlaylistClick
                 )
                 LibraryTab.QQMUSIC -> QqMusicPlaylistList(
-                    playlists = emptyList(), // TODO: Add qqMusicPlaylists to LibraryUiState when QQ Music is implemented
+                    playlists = emptyList(),
                     listState = qqMusicListState,
-                    onClick = { /* TODO: Implement QQ Music playlist click */ }
+                    onClick = {  }
                 )
             }
         }
@@ -490,7 +462,7 @@ private fun NeteasePlaylistList(
 
 @Composable
 private fun QqMusicPlaylistList(
-    playlists: List<Any>, // TODO: Replace with proper QQ Music playlist type
+    playlists: List<Any>,
     listState: LazyListState,
     onClick: (Any) -> Unit
 ) {
@@ -502,7 +474,7 @@ private fun QqMusicPlaylistList(
         verticalArrangement = Arrangement.spacedBy(4.dp),
         modifier = Modifier.fillMaxSize()
     ) {
-        // TODO: Implement QQ Music playlist list when type is available
+
         item {
             Card(
                 shape = RoundedCornerShape(12.dp),

@@ -15,30 +15,6 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-/*
- * NeriPlayer - A unified Android player for streaming music and videos from multiple online platforms.
- * Copyright (C) 2025-2025 NeriPlayer developers
- * https://github.com/cwuom/NeriPlayer
- *
- * This software is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
-
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
- *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software.
- * If not, see <https://www.gnu.org/licenses/>.
- *
- * File: moe.ouom.neriplayer.util/NPLogger
- * Created: 2025/8/11
- */
-
 object NPLogger {
 
     private var appTag: String = BuildConfig.TAG
@@ -48,14 +24,6 @@ object NPLogger {
 
     private val logScope = CoroutineScope(Dispatchers.IO)
 
-    /**
-     * Initializes the logger. Prefer calling once early (e.g., Application.onCreate).
-     * Safe to call repeatedly; it is idempotent except when toggling file logging.
-     *
-     * @param context The application context, used for resolving log directory paths.
-     * @param defaultTag Optional global log TAG; defaults to BuildConfig.TAG.
-     * @param enableFileLogging Whether to enable file logging at init time (can be changed later).
-     */
     fun init(context: Context, defaultTag: String? = null, enableFileLogging: Boolean = false) {
         defaultTag?.let { this.appTag = it }
 
@@ -69,7 +37,6 @@ object NPLogger {
             return
         }
 
-        // Already initialized: only process file logging toggle
         setFileLoggingEnabled(context, enableFileLogging)
     }
 
@@ -91,9 +58,6 @@ object NPLogger {
         }
     }
 
-    /**
-     * Dynamically toggles file logging. Creates a new log file when enabling.
-     */
     fun setFileLoggingEnabled(context: Context, enabled: Boolean) {
         if (enabled == isFileLoggingEnabled && (enabled && logFile != null)) return
         isFileLoggingEnabled = enabled
@@ -118,9 +82,6 @@ object NPLogger {
         }
     }
 
-    /**
-     * Formats messages of various types into a readable string.
-     */
     private fun formatMessage(message: Any?): String {
         return when (message) {
             null -> "null"
@@ -159,7 +120,7 @@ object NPLogger {
                         Log.INFO -> "I"
                         Log.WARN -> "W"
                         Log.ERROR -> "E"
-                        else -> "U" // Unknown
+                        else -> "U"
                     }
                     val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault()).format(Date())
 
@@ -176,19 +137,13 @@ object NPLogger {
         }
     }
 
-    /** Ensures the log tag length is valid on all Android versions. */
     private fun ensureLogTag(tag: String): String {
-        // Prior to Android O (26), tags longer than 23 characters may crash/log incorrectly
+
         return if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.O && tag.length > 23) {
             tag.take(23)
         } else tag
     }
 
-    /**
-     * Returns the directory where log files are stored.
-     * @param context The application context.
-     * @return The log directory File object, or null if not available.
-     */
     fun getLogDirectory(context: Context): File? {
         if (!isFileLoggingEnabled) return null
         return File(context.getExternalFilesDir(null), "logs").also {

@@ -1,28 +1,5 @@
 package moe.ouom.neriplayer.core.player
 
-/*
- * NeriPlayer - A unified Android player for streaming music and videos from multiple online platforms.
- * Copyright (C) 2025-2025 NeriPlayer developers
- * https://github.com/cwuom/NeriPlayer
- *
- * This software is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
- *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software.
- * If not, see <https://www.gnu.org/licenses/>.
- *
- * File: moe.ouom.neriplayer.core.player/AudioDownloadManager
- * Created: 2025/8/20
- */
-
 import android.content.Context
 import android.net.Uri
 import android.os.Environment
@@ -47,11 +24,6 @@ import java.net.URLConnection
 import java.text.Normalizer
 import kotlin.math.roundToInt
 
-/**
- * 音频下载管理器：解析来源（网易云 / Bilibili）并保存到本地 App 专属音乐目录
- * - 不依赖系统 DownloadManager，直接用共享 OkHttpClient，实现自定义 Header 与代理
- * - 保存路径：/Android/data/<package>/files/Music/NeriPlayer/<Artist - Title>.<ext>
- */
 object AudioDownloadManager {
 
     private const val TAG = "NERI-Downloader"
@@ -60,11 +32,10 @@ object AudioDownloadManager {
 
     private val _progressFlow = MutableStateFlow<DownloadProgress?>(null)
     val progressFlow: StateFlow<DownloadProgress?> = _progressFlow
-    
+
     private val _batchProgressFlow = MutableStateFlow<BatchDownloadProgress?>(null)
     val batchProgressFlow: StateFlow<BatchDownloadProgress?> = _batchProgressFlow
-    
-    // 取消下载控制
+
     private val _isCancelled = MutableStateFlow(false)
     val isCancelledFlow: StateFlow<Boolean> = _isCancelled
 
@@ -98,7 +69,7 @@ object AudioDownloadManager {
     suspend fun downloadSong(context: Context, song: SongItem) {
         withContext(Dispatchers.IO) {
             try {
-                // 检查文件是否已存在
+
                 val existingFile = getLocalFilePath(context, song)
                 if (existingFile != null) {
                     NPLogger.d(TAG, "文件已存在，跳过下载: ${song.name}")
@@ -125,17 +96,16 @@ object AudioDownloadManager {
                 val baseDir = context.getExternalFilesDir(Environment.DIRECTORY_MUSIC) ?: context.filesDir
                 val downloadDir = File(baseDir, "NeriPlayer").apply { mkdirs() }
                 val destFile = uniqueFile(downloadDir, fileName)
-                
-                // 同时下载歌词
+
                 if (!song.album.startsWith("Bilibili")) {
                     downloadLyrics(context, song)
                 }
-                // 封面缓存（使用 baseName 作为关联名，保证扫描可命中）
+
                 try {
                     val baseDir = context.getExternalFilesDir(Environment.DIRECTORY_MUSIC) ?: context.filesDir
                     val downloadDir = File(baseDir, "NeriPlayer")
                     val coverDir = File(downloadDir, "Covers").apply { mkdirs() }
-                    // 优先用网络封面
+
                     val coverUrl = song.coverUrl
                     if (!coverUrl.isNullOrBlank()) {
                         val coverFile = File(coverDir, "$baseName.jpg")
@@ -163,11 +133,10 @@ object AudioDownloadManager {
                 val request = reqBuilder.build()
                 val client = AppContainer.sharedOkHttpClient
 
-                // 貌似很多平台都不支持多线程下载(x  所以采用单线程
                 singleThreadDownload(client, request, destFile)
 
                 _progressFlow.value = null
-                // 通知媒体库（仅当保存到公共目录时必要；App 专属目录通常播放器可直接访问）
+
                 try {
                     context.contentResolver.openInputStream(Uri.fromFile(destFile))?.close()
                 } catch (_: Exception) { }
@@ -179,7 +148,6 @@ object AudioDownloadManager {
         }
     }
 
-    /** 批量下载歌单中的所有歌曲 */
     suspend fun downloadPlaylist(context: Context, songs: List<SongItem>) {
         withContext(Dispatchers.IO) {
             try {
@@ -193,12 +161,12 @@ object AudioDownloadManager {
 
                 for (index in songs.indices) {
                     val song = songs[index]
-                    // 检查是否被取消
+
                     if (_isCancelled.value) {
                         NPLogger.d(TAG, "下载已取消")
                         break
                     }
-                    
+
                     try {
                         _batchProgressFlow.value = _batchProgressFlow.value?.copy(
                             currentSong = song.name,
@@ -206,7 +174,6 @@ object AudioDownloadManager {
                             currentSongIndex = index
                         )
 
-                        // 监听单首歌曲的下载进度
                         val progressJob = launch {
                             _progressFlow.collect { progress ->
                                 _batchProgressFlow.value?.let { current ->
@@ -216,8 +183,7 @@ object AudioDownloadManager {
                         }
 
                         downloadSong(context, song)
-                        
-                        // 停止监听进度
+
                         progressJob.cancel()
 
                         _batchProgressFlow.value?.let { current ->
@@ -238,29 +204,25 @@ object AudioDownloadManager {
             }
         }
     }
-    
-    /** 取消下载 */
+
     fun cancelDownload() {
         _isCancelled.value = true
         _progressFlow.value = null
         _batchProgressFlow.value = null
     }
 
-    /** 下载歌词文件 */
     private fun downloadLyrics(context: Context, song: SongItem) {
         try {
             val baseDir = context.getExternalFilesDir(Environment.DIRECTORY_MUSIC) ?: context.filesDir
             val lyricsDir = File(baseDir, "NeriPlayer/Lyrics").apply { mkdirs() }
             val lyricFile = File(lyricsDir, "${song.id}_${song.album}.lrc")
-            
-            // 优先使用song.matchedLyric中的歌词
+
             if (!song.matchedLyric.isNullOrBlank()) {
                 lyricFile.writeText(song.matchedLyric)
                 NPLogger.d(TAG, "使用匹配的歌词保存: ${song.name}")
                 return
             }
-            
-            // 如果没有匹配的歌词，且是网易云歌曲，尝试从API获取
+
             val isFromNetease = !song.album.startsWith("Bilibili")
             if (!isFromNetease) return
 
@@ -278,12 +240,10 @@ object AudioDownloadManager {
         }
     }
 
-    /** 获取本地音频文件路径 */
     fun getLocalFilePath(context: Context, song: SongItem): String? {
         val baseDir = context.getExternalFilesDir(Environment.DIRECTORY_MUSIC) ?: context.filesDir
         val downloadDir = File(baseDir, "NeriPlayer")
-        
-        // 查找可能的文件扩展名
+
         val possibleExtensions = listOf("flac", "m4a", "mp3", "eac3")
         for (ext in possibleExtensions) {
             val fileName = generateFileName(song, ext)
@@ -292,13 +252,12 @@ object AudioDownloadManager {
         }
         return null
     }
-    
+
     private fun generateFileName(song: SongItem, ext: String? = null): String {
         val baseName = sanitizeFileName("${song.artist} - ${song.name}")
         return if (ext.isNullOrBlank()) baseName else "$baseName.$ext"
     }
 
-    /** 获取本地歌词文件路径 */
     fun getLyricFilePath(context: Context, song: SongItem): String? {
         val baseDir = context.getExternalFilesDir(Environment.DIRECTORY_MUSIC) ?: context.filesDir
         val lyricsDir = File(baseDir, "NeriPlayer/Lyrics")
@@ -306,7 +265,6 @@ object AudioDownloadManager {
         return if (lyricFile.exists()) lyricFile.absolutePath else null
     }
 
-    // 解析网易云直链
     private suspend fun resolveNetease(songId: Long): Triple<String, String?, String?>? {
         val quality = try { AppContainer.settingsRepo.audioQualityFlow.first() } catch (_: Exception) { "exhigh" }
         val raw = AppContainer.neteaseClient.getSongDownloadUrl(songId, level = quality)
@@ -320,7 +278,7 @@ object AudioDownloadManager {
             } ?: return null
             val url = data.optString("url", "")
             if (url.isNullOrBlank()) return null
-            val type = data.optString("type", "") // e.g., mp3/flac
+            val type = data.optString("type", "")
             val mime = guessMimeFromUrl(url)
             Triple(ensureHttps(url), mime, type.lowercase())
         } catch (_: Exception) {
@@ -328,9 +286,8 @@ object AudioDownloadManager {
         }
     }
 
-    // 解析 B 站音频直链（按偏好选择）
     private suspend fun resolveBili(song: SongItem): Triple<String, String?, String?>? {
-        // album: "Bilibili" 或 "Bilibili|{cid}"
+
         val parts = song.album.split('|')
         val cid = if (parts.size > 1) parts[1].toLongOrNull() ?: 0L else 0L
 
@@ -389,7 +346,6 @@ object AudioDownloadManager {
         return p.substring(dot + 1).lowercase().take(6)
     }
 
-    /** 单线程下载 */
     private suspend fun singleThreadDownload(
         client: okhttp3.OkHttpClient,
         request: Request,
@@ -419,6 +375,4 @@ object AudioDownloadManager {
         }
     }
 }
-
-
 

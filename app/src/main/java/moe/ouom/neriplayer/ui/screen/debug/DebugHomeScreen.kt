@@ -1,28 +1,5 @@
 package moe.ouom.neriplayer.ui.screen.debug
 
-/*
- * NeriPlayer - A unified Android player for streaming music and videos from multiple online platforms.
- * Copyright (C) 2025-2025 NeriPlayer developers
- * https://github.com/cwuom/NeriPlayer
- *
- * This software is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
- *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software.
- * If not, see <https://www.gnu.org/licenses/>.
- *
- * File: moe.ouom.neriplayer.ui.screen.debug/DebugHomeScreen
- * Created: 2025/8/14
- */
-
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -136,7 +113,7 @@ fun DebugHomeScreen(
                     },
                     headlineContent = { Text("查看应用日志") },
                     supportingContent = { Text("查看、复制和导出本次运行的日志") },
-                    modifier = Modifier.clickable(onClick = onOpenLogs), // 使用新回调
+                    modifier = Modifier.clickable(onClick = onOpenLogs),
                     colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
                 )
             }
@@ -148,7 +125,7 @@ fun DebugHomeScreen(
                 imageVector = Icons.Outlined.SettingsBackupRestore,
                 contentDescription = "隐藏"
             )
-            Spacer(Modifier.height(0.dp)) // 占位，避免排版抖动
+            Spacer(Modifier.height(0.dp))
             Text("隐藏调试模式")
         }
 

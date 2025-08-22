@@ -1,29 +1,5 @@
 package moe.ouom.neriplayer.activity
 
-/*
- * NeriPlayer - A unified Android player for streaming music and videos from multiple online platforms.
- * Copyright (C) 2025-2025 NeriPlayer developers
- * https://github.com/cwuom/NeriPlayer
- *
- * This software is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
- *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software.
- * If not, see <https://www.gnu.org/licenses/>.
- *
- * File: moe.ouom.neriplayer.activity/MainActivity
- * Created: 2025/8/8
- */
-
-
 import android.Manifest
 import android.graphics.Color
 import android.os.Build
@@ -109,7 +85,7 @@ class MainActivity : ComponentActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         setContent {
-            // 初始化日志：在 Application 期也会被调用，重复调用是幂等的
+
             val repo = SettingsRepository(this)
             val devModeEnabled by repo.devModeEnabledFlow.collectAsState(initial = false)
             NPLogger.init(context = this, enableFileLogging = devModeEnabled)
@@ -145,7 +121,6 @@ class MainActivity : ComponentActivity() {
                     controller.isAppearanceLightNavigationBars = !useDark
                 }
 
-                // 入场动画状态
                 var playedEntrance by rememberSaveable { mutableStateOf(false) }
                 LaunchedEffect(Unit) { playedEntrance = true }
 
@@ -190,11 +165,10 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                         AppStage.Main -> {
-                            // 弹窗状态管理和事件监听
+
                             var showDialog by remember { mutableStateOf(false) }
                             var dialogMessage by remember { mutableStateOf("") }
                             val lifecycleOwner = LocalLifecycleOwner.current
-
 
                             LaunchedEffect(lifecycleOwner.lifecycle) {
                                 lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -229,7 +203,7 @@ class MainActivity : ComponentActivity() {
 
                             NeriApp(
                                 onIsDarkChanged = { isDark ->
-                                    // 仅调整窗口底色 & 系统栏外观
+
                                     applyWindowBackground(isDark)
                                 }
                             )
@@ -252,8 +226,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-/* --------------------- 统一主题 --------------------- */
-
 @Composable
 fun NeriTheme(
     useDark: Boolean,
@@ -275,8 +247,6 @@ fun NeriTheme(
         content = content
     )
 }
-
-/* --------------------- 免责声明与隐私说明 --------------------- */
 
 @Composable
 fun DisclaimerScreen(onAgree: () -> Unit) {

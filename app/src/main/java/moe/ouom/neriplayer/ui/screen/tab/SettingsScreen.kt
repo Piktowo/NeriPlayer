@@ -1,28 +1,5 @@
 package moe.ouom.neriplayer.ui.screen.tab
 
-/*
- * NeriPlayer - A unified Android player for streaming music and videos from multiple online platforms.
- * Copyright (C) 2025-2025 NeriPlayer developers
- * https://github.com/cwuom/NeriPlayer
- *
- * This software is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
- *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software.
- * If not, see <https://www.gnu.org/licenses/>.
- *
- * File: moe.ouom.neriplayer.ui.screen.tab/SettingsScreen
- * Created: 2025/8/8
- */
-
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.net.Uri
@@ -153,7 +130,6 @@ import moe.ouom.neriplayer.util.HapticTextButton
 import moe.ouom.neriplayer.util.NightModeHelper
 import moe.ouom.neriplayer.util.convertTimestampToDate
 
-/** 可复用的折叠区头部 */
 @Composable
 private fun ExpandableHeader(
     icon: ImageVector,
@@ -187,7 +163,6 @@ private fun ExpandableHeader(
     )
 }
 
-/** 主题色预览行（当关闭系统动态取色时显示） */
 @Composable
 private fun ThemeSeedListItem(seedColorHex: String, onClick: () -> Unit) {
     ListItem(
@@ -213,7 +188,6 @@ private fun ThemeSeedListItem(seedColorHex: String, onClick: () -> Unit) {
     )
 }
 
-/** UI 缩放设置入口 */
 @Composable
 private fun UiScaleListItem(currentScale: Float, onClick: () -> Unit) {
     ListItem(
@@ -231,7 +205,6 @@ private fun UiScaleListItem(currentScale: Float, onClick: () -> Unit) {
         colors = ListItemDefaults.colors(containerColor = Color.Transparent)
     )
 }
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -266,29 +239,22 @@ fun SettingsScreen(
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val context = LocalContext.current
 
-    // 登录菜单的状态
     var loginExpanded by remember { mutableStateOf(false) }
-    // 仅用于示意展开箭头的旋转，后续可复用至 ExpandableHeader 的 arrowRotation 入参
+
     val arrowRotation by animateFloatAsState(targetValue = if (loginExpanded) 180f else 0f, label = "arrow")
 
-    // 个性化菜单的状态
     var personalizationExpanded by remember { mutableStateOf(false) }
     val personalizationArrowRotation by animateFloatAsState(targetValue = if (personalizationExpanded) 180f else 0f, label = "personalization_arrow")
 
-    // 网络配置菜单的状态
     var networkExpanded by remember { mutableStateOf(false) }
     val networkArrowRotation by animateFloatAsState(targetValue = if (networkExpanded) 180f else 0f, label = "network_arrow")
 
-    // 下载管理菜单的状态
     var downloadManagerExpanded by remember { mutableStateOf(false) }
     val downloadManagerArrowRotation by animateFloatAsState(targetValue = if (downloadManagerExpanded) 180f else 0f, label = "download_manager_arrow")
 
-    // 备份与恢复菜单的状态
     var backupRestoreExpanded by remember { mutableStateOf(false) }
     val backupRestoreArrowRotation by animateFloatAsState(targetValue = if (backupRestoreExpanded) 180f else 0f, label = "backup_restore_arrow")
 
-
-    // 各种对话框和弹窗的显示状态 //
     var showQualityDialog by remember { mutableStateOf(false) }
     var showNeteaseSheet by remember { mutableStateOf(false) }
     var showBiliQualityDialog by remember { mutableStateOf(false) }
@@ -297,7 +263,6 @@ fun SettingsScreen(
     var showBiliCookieDialog by remember { mutableStateOf(false) }
     var showColorPickerDialog by remember { mutableStateOf(false) }
     var showDpiDialog by remember { mutableStateOf(false) }
-    // ------------------------------------
 
     val neteaseVm: NeteaseAuthViewModel = viewModel()
     var inlineMsg by remember { mutableStateOf<String?>(null) }
@@ -307,17 +272,15 @@ fun SettingsScreen(
     var versionTapCount by remember { mutableIntStateOf(0) }
     var biliCookieText by remember { mutableStateOf("") }
     val biliVm: BiliAuthViewModel = viewModel()
-    
-    // 备份与恢复
+
     val backupRestoreVm: BackupRestoreViewModel = viewModel()
     val backupRestoreUiState by backupRestoreVm.uiState.collectAsState()
 
-    // 照片选择器
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
         onResult = { uri ->
             if (uri != null) {
-                // 获取永久访问权限
+
                 val flag = Intent.FLAG_GRANT_READ_URI_PERMISSION
                 context.contentResolver.takePersistableUriPermission(uri, flag)
                 onBackgroundImageChange(uri)
@@ -337,7 +300,6 @@ fun SettingsScreen(
         }
     }
 
-    // 备份与恢复的SAF启动器
     val exportPlaylistLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
     ) { uri ->
@@ -365,7 +327,6 @@ fun SettingsScreen(
         }
     }
 
-    // 当前所选音质对应的中文标签
     val qualityLabel = remember(preferredQuality) {
         when (preferredQuality) {
             "standard" -> "标准"
@@ -429,7 +390,6 @@ fun SettingsScreen(
         }
     }
 
-
     Scaffold(
         modifier = Modifier
             .fillMaxSize()
@@ -465,7 +425,7 @@ fun SettingsScreen(
             ),
             state = listState
         ) {
-            // 动态取色
+
             item {
                 ListItem(
                     leadingContent = {
@@ -485,7 +445,7 @@ fun SettingsScreen(
             }
 
             item {
-                AnimatedVisibility(visible = !dynamicColor) { // 仅在关闭系统动态取色时显示
+                AnimatedVisibility(visible = !dynamicColor) {
                     ThemeSeedListItem(
                         seedColorHex = seedColorHex,
                         onClick = { showColorPickerDialog = true }
@@ -493,8 +453,6 @@ fun SettingsScreen(
                 }
             }
 
-
-            // 强制深色
             item {
                 ListItem(
                     leadingContent = {
@@ -522,7 +480,6 @@ fun SettingsScreen(
                 )
             }
 
-            // 登录三方平台
             item {
                 ExpandableHeader(
                     icon = Icons.Filled.AccountCircle,
@@ -535,7 +492,6 @@ fun SettingsScreen(
                 )
             }
 
-            // 展开区域
             item {
                 AnimatedVisibility(
                     visible = loginExpanded,
@@ -548,7 +504,7 @@ fun SettingsScreen(
                             .background(Color.Transparent)
                             .padding(start = 16.dp, end = 8.dp, bottom = 8.dp)
                     ) {
-                        // 哔哩哔哩
+
                         ListItem(
                             leadingContent = {
                                 Icon(
@@ -569,8 +525,6 @@ fun SettingsScreen(
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                         )
 
-
-                        // YouTube
                         ListItem(
                             leadingContent = {
                                 Icon(
@@ -586,7 +540,6 @@ fun SettingsScreen(
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                         )
 
-                        // 网易云音乐
                         ListItem(
                             leadingContent = {
                                 Icon(
@@ -605,7 +558,6 @@ fun SettingsScreen(
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                         )
 
-                        // QQ 音乐
                         ListItem(
                             leadingContent = {
                                 Icon(
@@ -636,7 +588,6 @@ fun SettingsScreen(
                 )
             }
 
-            // 展开区域
             item {
                 AnimatedVisibility(
                     visible = personalizationExpanded,
@@ -667,7 +618,6 @@ fun SettingsScreen(
                         )
                         UiScaleListItem(currentScale = uiDensityScale, onClick = { showDpiDialog = true })
 
-                        // 选择背景图
                         ListItem(
                             modifier = Modifier.clickable {
                                 photoPickerLauncher.launch(
@@ -687,15 +637,13 @@ fun SettingsScreen(
                             supportingContent = { Text(if (backgroundImageUri != null) "点击更换" else "选择一张图片") }
                         )
 
-                        // 展开区域
                         AnimatedVisibility(visible = backgroundImageUri != null) {
                             Column {
-                                // 清除背景图按钮
+
                                 TextButton(onClick = { onBackgroundImageChange(null) }) {
                                     Text("清除背景图")
                                 }
 
-                                // 模糊度调节
                                 ListItem(
                                     headlineContent = { Text("背景模糊度") },
                                     colors = ListItemDefaults.colors(
@@ -705,12 +653,11 @@ fun SettingsScreen(
                                         Slider(
                                             value = backgroundImageBlur,
                                             onValueChange = onBackgroundImageBlurChange,
-                                            valueRange = 0f..25f // Coil 的模糊范围
+                                            valueRange = 0f..25f
                                         )
                                     }
                                 )
 
-                                // 透明度调节
                                 ListItem(
                                     headlineContent = { Text("背景透明度") },
                                     colors = ListItemDefaults.colors(
@@ -742,7 +689,6 @@ fun SettingsScreen(
                 )
             }
 
-            // 展开区域
             item {
                 AnimatedVisibility(
                     visible = networkExpanded,
@@ -774,7 +720,6 @@ fun SettingsScreen(
                     }
                 }
             }
-
 
             item {
                 ListItem(
@@ -810,7 +755,6 @@ fun SettingsScreen(
                 )
             }
 
-            // 下载管理器
             item {
                 ExpandableHeader(
                     icon = Icons.Outlined.Download,
@@ -823,7 +767,6 @@ fun SettingsScreen(
                 )
             }
 
-            // 展开区域
             item {
                 AnimatedVisibility(
                     visible = downloadManagerExpanded,
@@ -836,7 +779,7 @@ fun SettingsScreen(
                             .background(Color.Transparent)
                             .padding(start = 16.dp, end = 8.dp, bottom = 8.dp)
                     ) {
-                        // 下载进度显示
+
                         val batchDownloadProgress by AudioDownloadManager.batchProgressFlow.collectAsState()
 
                         batchDownloadProgress?.let { progress ->
@@ -864,7 +807,6 @@ fun SettingsScreen(
                                 colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                             )
 
-                            // 进度条
                             LinearProgressIndicator(
                                 progress = { (progress.percentage / 100f).coerceIn(0f, 1f) },
                                 modifier = Modifier
@@ -904,7 +846,6 @@ fun SettingsScreen(
                 }
             }
 
-            // 备份与恢复
             item {
                 ExpandableHeader(
                     icon = Icons.Outlined.Backup,
@@ -917,7 +858,6 @@ fun SettingsScreen(
                 )
             }
 
-            // 展开区域
             item {
                 AnimatedVisibility(
                     visible = backupRestoreExpanded,
@@ -930,7 +870,7 @@ fun SettingsScreen(
                             .background(Color.Transparent)
                             .padding(start = 16.dp, end = 8.dp, bottom = 8.dp)
                     ) {
-                        // 当前歌单数量
+
                         val currentPlaylistCount = backupRestoreVm.getCurrentPlaylistCount(context)
                         ListItem(
                             leadingContent = {
@@ -945,7 +885,6 @@ fun SettingsScreen(
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                         )
 
-                        // 导出歌单
                         ListItem(
                             leadingContent = {
                                 Icon(
@@ -964,7 +903,6 @@ fun SettingsScreen(
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                         )
 
-                        // 导入歌单
                         ListItem(
                             leadingContent = {
                                 Icon(
@@ -983,7 +921,6 @@ fun SettingsScreen(
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                         )
 
-                        // 导出进度
                         backupRestoreUiState.exportProgress?.let { progress ->
                             ListItem(
                                 headlineContent = { Text("导出进度") },
@@ -998,7 +935,6 @@ fun SettingsScreen(
                             )
                         }
 
-                        // 导入进度
                         backupRestoreUiState.importProgress?.let { progress ->
                             ListItem(
                                 headlineContent = { Text("导入进度") },
@@ -1013,7 +949,6 @@ fun SettingsScreen(
                             )
                         }
 
-                        // 分析进度
                         backupRestoreUiState.analysisProgress?.let { progress ->
                             ListItem(
                                 headlineContent = { Text("分析进度") },
@@ -1028,7 +963,6 @@ fun SettingsScreen(
                             )
                         }
 
-                        // 导出结果
                         AnimatedVisibility(
                             visible = backupRestoreUiState.lastExportMessage != null,
                             enter = slideInVertically(
@@ -1051,9 +985,9 @@ fun SettingsScreen(
                                         .fillMaxWidth()
                                         .padding(horizontal = 8.dp),
                                     shape = RoundedCornerShape(12.dp),
-                                    color = if (isSuccess) 
-                                        MaterialTheme.colorScheme.primaryContainer 
-                                    else 
+                                    color = if (isSuccess)
+                                        MaterialTheme.colorScheme.primaryContainer
+                                    else
                                         MaterialTheme.colorScheme.errorContainer,
                                     tonalElevation = 2.dp
                                 ) {
@@ -1075,7 +1009,6 @@ fun SettingsScreen(
                             }
                         }
 
-                        // 导入结果
                         AnimatedVisibility(
                             visible = backupRestoreUiState.lastImportMessage != null,
                             enter = slideInVertically(
@@ -1098,9 +1031,9 @@ fun SettingsScreen(
                                         .fillMaxWidth()
                                         .padding(horizontal = 8.dp),
                                     shape = RoundedCornerShape(12.dp),
-                                    color = if (isSuccess) 
-                                        MaterialTheme.colorScheme.primaryContainer 
-                                    else 
+                                    color = if (isSuccess)
+                                        MaterialTheme.colorScheme.primaryContainer
+                                    else
                                         MaterialTheme.colorScheme.errorContainer,
                                     tonalElevation = 2.dp
                                 ) {
@@ -1125,7 +1058,6 @@ fun SettingsScreen(
                 }
             }
 
-            // 关于
             item {
                 ListItem(
                     leadingContent = {
@@ -1141,7 +1073,6 @@ fun SettingsScreen(
                 )
             }
 
-            // Build UUID
             item {
                 ListItem(
                     leadingContent = {
@@ -1157,7 +1088,6 @@ fun SettingsScreen(
                 )
             }
 
-            // 版本
             item {
                 ListItem(
                     leadingContent = {
@@ -1188,7 +1118,6 @@ fun SettingsScreen(
                 )
             }
 
-            // 编译时间
             item {
                 ListItem(
                     leadingContent = {
@@ -1204,7 +1133,6 @@ fun SettingsScreen(
                 )
             }
 
-            // GitHub
               item {
                   ListItem(
                       leadingContent = {
@@ -1293,13 +1221,11 @@ fun SettingsScreen(
         )
     }
 
-    // 网易云登录窗
     if (showNeteaseSheet) {
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
         val conf = LocalConfiguration.current
         val sheetHeight = (conf.screenHeightDp * 0.75f).dp
 
-        // “发送验证码” 确认对话框
         if (showConfirmDialog) {
             AlertDialog(
                 onDismissRequest = { showConfirmDialog = false },
@@ -1320,11 +1246,9 @@ fun SettingsScreen(
             )
         }
 
-        // 0: 浏览器登录 1: 粘贴Cookie 2: 验证码登录
         var selectedTab by remember { mutableIntStateOf(0) }
         var rawCookie by remember { mutableStateOf("") }
 
-        // WebView 登录回调
         val webLoginLauncher = rememberLauncherForActivityResult(
             contract = ActivityResultContracts.StartActivityForResult()
         ) { result ->
@@ -1339,7 +1263,7 @@ fun SettingsScreen(
                     }
                     m
                 }
-                // 保存
+
                 neteaseVm.importCookiesFromMap(map)
             } else {
                 inlineMsg = "已取消读取 Cookie"
@@ -1361,7 +1285,6 @@ fun SettingsScreen(
                     Text(text = "网易云音乐登录", style = MaterialTheme.typography.titleLarge)
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // 内嵌提示条
                     AnimatedVisibility(visible = inlineMsg != null, enter = fadeIn(), exit = fadeOut()) {
                         InlineMessage(
                             text = inlineMsg ?: "",
@@ -1369,7 +1292,6 @@ fun SettingsScreen(
                         )
                     }
 
-                    // 使用 PrimaryTabRow（Material3 推荐），避免旧 TabRow 的弃用告警
                     androidx.compose.material3.PrimaryTabRow(selectedTabIndex = selectedTab) {
                         Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }, text = { Text("浏览器登录") })
                         Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("粘贴 Cookie") })
@@ -1453,7 +1375,6 @@ fun SettingsScreen(
         )
     }
 
-    // 音质选择对话框
     if (showQualityDialog) {
         AlertDialog(
             onDismissRequest = { showQualityDialog = false },
@@ -1499,7 +1420,6 @@ fun SettingsScreen(
         )
     }
 
-    // Cookies 展示对话框
     if (showCookieDialog) {
         AlertDialog(
             onDismissRequest = { showCookieDialog = false },
@@ -1522,7 +1442,6 @@ fun SettingsScreen(
         )
     }
 
-    // 颜色选择对话框
     if (showColorPickerDialog) {
         ColorPickerDialog(
             currentHex = seedColorHex,
@@ -1591,7 +1510,7 @@ private fun ColorPickerItem(hex: String, isSelected: Boolean, onClick: () -> Uni
         contentAlignment = Alignment.Center
     ) {
         if (isSelected) {
-            // 计算一个与背景色对比度高的颜色来显示对勾
+
             val contentColor = if (ColorUtils.calculateLuminance(color.toArgb()) > 0.5) {
                 Color.Black
             } else {
@@ -1617,7 +1536,6 @@ private fun NeteaseLoginContent(
     Column(modifier = Modifier.fillMaxSize()) {
         Spacer(modifier = Modifier.height(12.dp))
 
-        // 内嵌提示条
         AnimatedVisibility(visible = message != null, enter = fadeIn(), exit = fadeOut()) {
             InlineMessage(
                 text = message ?: "",
@@ -1647,7 +1565,6 @@ private fun NeteaseLoginContent(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // 发送验证码
         HapticButton(
             enabled = !state.sending && state.countdownSec <= 0,
             onClick = { vm.askConfirmSendCaptcha() }
@@ -1663,7 +1580,6 @@ private fun NeteaseLoginContent(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // 登录
         HapticButton(
             enabled = state.captcha.isNotEmpty() && !state.loggingIn,
             onClick = { vm.loginByCaptcha(countryCode = "86") }
@@ -1679,7 +1595,6 @@ private fun NeteaseLoginContent(
     }
 }
 
-/** 内嵌提示条 */
 @Composable
 private fun InlineMessage(
     text: String,
@@ -1712,8 +1627,6 @@ private fun InlineMessage(
     }
 }
 
-
-/** DPI 设置对话框 */
 @SuppressLint("DefaultLocale")
 @Composable
 private fun DpiSettingDialog(
@@ -1738,7 +1651,7 @@ private fun DpiSettingDialog(
                     value = sliderValue,
                     onValueChange = { sliderValue = it },
                     valueRange = 0.6f..1.2f,
-                    steps = 11, // (1.2f - 0.6f) / 0.05f - 1 = 11
+                    steps = 11,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.height(8.dp))
@@ -1756,7 +1669,7 @@ private fun DpiSettingDialog(
         dismissButton = {
             Row {
                 HapticTextButton(onClick = {
-                    sliderValue = 1.0f // 仅重置滑块状态，不应用
+                    sliderValue = 1.0f
                 }) {
                     Text("重置")
                 }
@@ -1768,7 +1681,6 @@ private fun DpiSettingDialog(
     )
 }
 
-/** 兼容性：不用依赖 collectAsState / lifecycle-compose，手动收集 StateFlow */
 @Composable
 private fun <T> StateFlow<T>.collectAsStateWithLifecycleCompat(): State<T> {
     val flow = this

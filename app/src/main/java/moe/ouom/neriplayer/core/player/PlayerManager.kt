@@ -2,30 +2,6 @@
 
 package moe.ouom.neriplayer.core.player
 
-/*
- * NeriPlayer - A unified Android player for streaming music and videos from multiple online platforms.
- * Copyright (C) 2025-2025 NeriPlayer developers
- * https://github.com/cwuom/NeriPlayer
- *
- * This software is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
- *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software.
- * If not, see <https://www.gnu.org/licenses/>.
- *
- * File: moe.ouom.neriplayer.core.player/PlayerManager
- * Updated: 2025/8/16
- */
-
-
 import android.app.Application
 import android.content.Context
 import android.media.AudioDeviceCallback
@@ -95,7 +71,6 @@ data class AudioDevice(
     val icon: ImageVector
 )
 
-/** 用于封装播放器需要通知UI的事件 */
 sealed class PlayerEvent {
     data class ShowLoginPrompt(val message: String) : PlayerEvent()
     data class ShowError(val message: String) : PlayerEvent()
@@ -107,14 +82,6 @@ private sealed class SongUrlResult {
     object Failure : SongUrlResult()
 }
 
-/**
- * PlayerManager 负责：
- * - 初始化 ExoPlayer、缓存、渲染管线，并与应用配置（音质、Cookie 等）打通
- * - 维护播放队列与索引，暴露 StateFlow 给 UI（当前曲、队列、播放/进度、随机/循环）
- * - 解析跨平台播放地址（网易云/B 站），构造 MediaItem 与自定义缓存键
- * - 实现顺序/随机播放，包括“历史/未来/抽签袋”三栈模型，保证可回退与分叉前进
- * - 序列化/反序列化播放状态文件，实现应用重启后的恢复
- */
 object PlayerManager {
     private const val FAVORITES_NAME = "我喜欢的音乐"
     const val BILI_SOURCE_TAG = "Bilibili"
@@ -139,10 +106,9 @@ object PlayerManager {
     private var currentPlaylist: List<SongItem> = emptyList()
     private var currentIndex = -1
 
-    /** 随机播放相关  */
-    private val shuffleHistory = mutableListOf<Int>()   // 已经走过的路径（支持上一首）
-    private val shuffleFuture  = mutableListOf<Int>()   // 预定的“下一首们”（支持先上后下仍回到原来的下一首）
-    private var shuffleBag     = mutableListOf<Int>()   // 本轮还没“抽签”的下标池（不含 current）
+    private val shuffleHistory = mutableListOf<Int>()
+    private val shuffleFuture  = mutableListOf<Int>()
+    private var shuffleBag     = mutableListOf<Int>()
 
     private var consecutivePlayFailures = 0
     private const val MAX_CONSECUTIVE_FAILURES = 10
@@ -171,11 +137,9 @@ object PlayerManager {
     private val _playerEventFlow = MutableSharedFlow<PlayerEvent>()
     val playerEventFlow: SharedFlow<PlayerEvent> = _playerEventFlow.asSharedFlow()
 
-    /** 向 UI 暴露当前实际播放链接，用于来源展示 */
     private val _currentMediaUrl = MutableStateFlow<String?>(null)
     val currentMediaUrlFlow: StateFlow<String?> = _currentMediaUrl
 
-    /** 给 UI 用的歌单流 */
     private val _playlistsFlow = MutableStateFlow<List<LocalPlaylist>>(emptyList())
     val playlistsFlow: StateFlow<List<LocalPlaylist>> = _playlistsFlow
 
@@ -191,21 +155,14 @@ object PlayerManager {
     val cloudMusicSearchApi = AppContainer.cloudMusicSearchApi
     val qqMusicSearchApi = AppContainer.qqMusicSearchApi
 
-
     private fun isPreparedInPlayer(): Boolean = player.currentMediaItem != null
 
     private val gson = Gson()
 
-    /** 在后台线程发布事件到 UI（非阻塞） */
     private fun postPlayerEvent(event: PlayerEvent) {
         ioScope.launch { _playerEventFlow.emit(event) }
     }
 
-    /**
-     * 基于歌曲来源与所选音质构建缓存键
-     * - B 站：bili-avid-可选cid-音质
-     * - 网易云：netease-songId-音质
-     */
     private fun computeCacheKey(song: SongItem): String {
         val isBili = song.album.startsWith(BILI_SOURCE_TAG)
         return if (isBili) {
@@ -221,7 +178,6 @@ object PlayerManager {
         }
     }
 
-    /** 基于 URL 与缓存键构建 MediaItem（含自定义缓存键，便于跨音质/来源复用/隔离） */
     private fun buildMediaItem(song: SongItem, url: String, cacheKey: String): MediaItem {
         return MediaItem.Builder()
             .setMediaId(song.id.toString())
@@ -230,7 +186,6 @@ object PlayerManager {
             .build()
     }
 
-    /** 处理单曲播放结束：根据循环模式与随机三栈推进或停止 */
     private fun handleTrackEnded() {
         _playbackPositionMs.value = 0L
         when (player.repeatMode) {
@@ -269,12 +224,10 @@ object PlayerManager {
             dbProvider
         )
 
-        // Use OkHttpDataSource with a shared OkHttpClient from AppContainer to honor proxy settings
         val okHttpClient = moe.ouom.neriplayer.core.di.AppContainer.sharedOkHttpClient
         val upstreamFactory: HttpDataSource.Factory = OkHttpDataSource.Factory(okHttpClient)
         val conditionalHttpFactory = ConditionalHttpDataSourceFactory(upstreamFactory, biliCookieRepo)
 
-        // Use DefaultDataSource so file:// and content:// URIs are handled by File/ContentDataSource
         val defaultDsFactory = androidx.media3.datasource.DefaultDataSource.Factory(app, conditionalHttpFactory)
 
         val cacheDsFactory = CacheDataSource.Factory()
@@ -300,7 +253,6 @@ object PlayerManager {
             .buildUpon()
             .setAudioOffloadPreferences(audioOffload)
             .build()
-
 
         player.addListener(object : Player.Listener {
             override fun onPlayerError(error: PlaybackException) {
@@ -341,7 +293,6 @@ object PlayerManager {
 
         player.playWhenReady = false
 
-        // 订阅音质
         ioScope.launch {
             settingsRepo.audioQualityFlow.collect { q -> preferredQuality = q }
         }
@@ -349,7 +300,6 @@ object PlayerManager {
             settingsRepo.biliAudioQualityFlow.collect { q -> biliPreferredQuality = q }
         }
 
-        // 同步本地歌单
         ioScope.launch {
             localRepo.playlists.collect { repoLists ->
                 _playlistsFlow.value = deepCopyPlaylists(repoLists)
@@ -371,7 +321,7 @@ object PlayerManager {
                 handleDeviceChange(audioManager)
             }
         }
-        // 保存引用以便 release 时注销，避免内存泄漏
+
         audioDeviceCallback = deviceCallback
         audioManager.registerAudioDeviceCallback(deviceCallback, null)
     }
@@ -420,7 +370,6 @@ object PlayerManager {
         _currentQueueFlow.value = currentPlaylist
         currentIndex = startIndex.coerceIn(0, songs.lastIndex)
 
-        // 清空历史与未来，重建洗牌袋
         shuffleHistory.clear()
         shuffleFuture.clear()
         if (player.shuffleModeEnabled) {
@@ -435,7 +384,6 @@ object PlayerManager {
         }
     }
 
-    /** 重建随机抽签袋，必要时排除当前曲，避免同曲立刻连播 */
     private fun rebuildShuffleBag(excludeIndex: Int? = null) {
         shuffleBag = currentPlaylist.indices.toMutableList()
         if (excludeIndex != null) shuffleBag.remove(excludeIndex)
@@ -461,7 +409,6 @@ object PlayerManager {
             persistState()
         }
 
-        // 当前曲不应再出现在洗牌袋中
         if (player.shuffleModeEnabled) {
             shuffleBag.remove(index)
         }
@@ -491,33 +438,32 @@ object PlayerManager {
                 is SongUrlResult.RequiresLogin -> {
                     NPLogger.w("NERI-PlayerManager", "需要登录才能播放: id=${song.id}, source=${song.album}")
                     postPlayerEvent(PlayerEvent.ShowLoginPrompt("播放失败，请尝试登录对应的平台"))
-                    withContext(Dispatchers.Main) { next() } // 自动跳到下一首
+                    withContext(Dispatchers.Main) { next() }
                 }
                 is SongUrlResult.Failure -> {
                     NPLogger.e("NERI-PlayerManager", "获取播放 URL 失败, 跳过: id=${song.id}, source=${song.album}")
                     consecutivePlayFailures++
-                    withContext(Dispatchers.Main) { next() } // 自动跳到下一首
+                    withContext(Dispatchers.Main) { next() }
                 }
             }
         }
     }
 
     private suspend fun resolveSongUrl(song: SongItem): SongUrlResult {
-        // 优先检查本地缓存
+
         val localResult = checkLocalCache(song)
         if (localResult != null) return localResult
-        
+
         return if (song.album.startsWith(BILI_SOURCE_TAG)) {
-            // 解析可能的 cid
+
             val parts = song.album.split('|')
             val cid = if (parts.size > 1) parts[1].toLongOrNull() ?: 0L else 0L
-            getBiliAudioUrl(song.id, cid) // song.id 始终是 avid
+            getBiliAudioUrl(song.id, cid)
         } else {
             getNeteaseSongUrl(song.id)
         }
     }
 
-    /** 检查歌曲是否有本地缓存，如果有则优先使用本地文件 */
     private fun checkLocalCache(song: SongItem): SongUrlResult? {
         val context = application
         val localPath = AudioDownloadManager.getLocalFilePath(context, song)
@@ -594,12 +540,6 @@ object PlayerManager {
         }
     }
 
-    /**
-     * 播放 Bilibili 视频的所有分 P
-     * @param videoInfo 包含所有分 P 信息的视频详情对象
-     * @param startIndex 从第几个分 P 开始播放
-     * @param coverUrl 封面 URL
-     */
     fun playBiliVideoParts(videoInfo: BiliClient.VideoBasicInfo, startIndex: Int, coverUrl: String) {
         check(initialized) { "Call PlayerManager.initialize(application) first." }
         val songs = videoInfo.pages.map { page ->
@@ -637,7 +577,7 @@ object PlayerManager {
         val isShuffle = player.shuffleModeEnabled
 
         if (isShuffle) {
-            // 如果有预定下一首，优先走它
+
             if (shuffleFuture.isNotEmpty()) {
                 val nextIdx = shuffleFuture.removeLast()
                 if (currentIndex != -1) shuffleHistory.add(currentIndex)
@@ -646,10 +586,9 @@ object PlayerManager {
                 return
             }
 
-            // 没有预定下一首，需要抽新随机
             if (shuffleBag.isEmpty()) {
                 if (force || player.repeatMode == Player.REPEAT_MODE_ALL) {
-                    rebuildShuffleBag(excludeIndex = currentIndex) // 新一轮，避免同曲连播
+                    rebuildShuffleBag(excludeIndex = currentIndex)
                 } else {
                     NPLogger.d("NERI-Player", "Shuffle finished and repeat is off, stopping.")
                     stopAndClearPlaylist()
@@ -658,20 +597,20 @@ object PlayerManager {
             }
 
             if (shuffleBag.isEmpty()) {
-                // 仅一首歌等极端情况
+
                 playAtIndex(currentIndex)
                 return
             }
 
             if (currentIndex != -1) shuffleHistory.add(currentIndex)
-            // 新随机 -> 断开未来路径
+
             shuffleFuture.clear()
 
             val pick = if (shuffleBag.size == 1) 0 else Random.nextInt(shuffleBag.size)
             currentIndex = shuffleBag.removeAt(pick)
             playAtIndex(currentIndex)
         } else {
-            // 顺序播放
+
             if (currentIndex < currentPlaylist.lastIndex) {
                 currentIndex++
             } else {
@@ -692,7 +631,7 @@ object PlayerManager {
 
         if (isShuffle) {
             if (shuffleHistory.isNotEmpty()) {
-                // 回退一步，同时把当前曲放到未来栈，以便再前进能回到原来的下一首
+
                 if (currentIndex != -1) shuffleFuture.add(currentIndex)
                 val prev = shuffleHistory.removeLast()
                 currentIndex = prev
@@ -784,15 +723,13 @@ object PlayerManager {
 
     fun hasItems(): Boolean = currentPlaylist.isNotEmpty()
 
-
-    /** 添加当前歌到“我喜欢的音乐” */
     fun addCurrentToFavorites() {
         val song = _currentSongFlow.value ?: return
         val updatedLists = optimisticUpdateFavorites(add = true, song = song)
         _playlistsFlow.value = deepCopyPlaylists(updatedLists)
         ioScope.launch {
             try {
-                // 确保收藏歌单存在
+
                 if (_playlistsFlow.value.none { it.name == FAVORITES_NAME }) {
                     localRepo.createPlaylist(FAVORITES_NAME)
                 }
@@ -803,7 +740,6 @@ object PlayerManager {
         }
     }
 
-    /** 从“我喜欢的音乐”移除当前歌 */
     fun removeCurrentFromFavorites() {
         val songId = _currentSongFlow.value?.id ?: return
         val updatedLists = optimisticUpdateFavorites(add = false, songId = songId)
@@ -817,7 +753,6 @@ object PlayerManager {
         }
     }
 
-    /** 切换收藏状态 */
     fun toggleCurrentFavorite() {
         val song = _currentSongFlow.value ?: return
         val fav = _playlistsFlow.value.firstOrNull { it.name == FAVORITES_NAME }
@@ -825,7 +760,6 @@ object PlayerManager {
         if (isFav) removeCurrentFromFavorites() else addCurrentToFavorites()
     }
 
-    /** 本地乐观修改收藏歌单 */
     private fun optimisticUpdateFavorites(
         add: Boolean,
         song: SongItem? = null,
@@ -854,7 +788,6 @@ object PlayerManager {
         return base
     }
 
-    /** 深拷贝列表，确保 Compose 稳定重组 */
     private fun deepCopyPlaylists(src: List<LocalPlaylist>): List<LocalPlaylist> {
         return src.map { pl ->
             LocalPlaylist(
@@ -891,22 +824,17 @@ object PlayerManager {
         }
     }
 
-    /**
-     * 修改：让 playBiliVideoAsAudio 也使用统一的 playPlaylist 入口
-     */
     fun playBiliVideoAsAudio(videos: List<BiliVideoItem>, startIndex: Int) {
         check(initialized) { "Call PlayerManager.initialize(application) first." }
         if (videos.isEmpty()) {
             NPLogger.w("NERI-Player", "playBiliVideoAsAudio called with EMPTY list")
             return
         }
-        // 转换为通用的 SongItem 列表，然后调用统一的播放入口
+
         val songs = videos.map { it.toSongItem() }
         playPlaylist(songs, startIndex)
     }
 
-
-    /** 获取网易云歌词 */
     suspend fun getNeteaseLyrics(songId: Long): List<LyricEntry> {
         return withContext(Dispatchers.IO) {
             try {
@@ -920,9 +848,8 @@ object PlayerManager {
         }
     }
 
-    /** 获取歌词，优先使用本地缓存 */
     suspend fun getLyrics(song: SongItem): List<LyricEntry> {
-        // 最优先使用song.matchedLyric中的歌词
+
         if (!song.matchedLyric.isNullOrBlank()) {
             try {
                 return parseNeteaseLrc(song.matchedLyric)
@@ -930,8 +857,7 @@ object PlayerManager {
                 NPLogger.w("NERI-PlayerManager", "匹配歌词解析失败: ${e.message}")
             }
         }
-        
-        // 其次检查本地歌词缓存
+
         val context = application
         val localLyricPath = AudioDownloadManager.getLyricFilePath(context, song)
         if (localLyricPath != null) {
@@ -943,9 +869,8 @@ object PlayerManager {
             }
         }
 
-        // 最后回退到在线获取
         return if (song.album.startsWith(BILI_SOURCE_TAG)) {
-            emptyList() // B站暂时没有歌词API
+            emptyList()
         } else {
             getNeteaseLyrics(song.id)
         }
@@ -955,7 +880,6 @@ object PlayerManager {
         if (currentPlaylist.isEmpty()) return
         if (index !in currentPlaylist.indices) return
 
-        // 用户点选队列，视作新路径分叉
         if (player.shuffleModeEnabled) {
             if (currentIndex != -1) shuffleHistory.add(currentIndex)
             shuffleFuture.clear()
@@ -966,72 +890,58 @@ object PlayerManager {
         playAtIndex(index)
     }
 
-    /**
-     * 将歌曲添加到播放队列的下一个位置
-     * @param song 要添加的歌曲
-     */
     fun addToQueueNext(song: SongItem) {
         if (currentPlaylist.isEmpty()) {
-            // 如果当前没有播放队列，直接播放这首歌
+
             playPlaylist(listOf(song), 0)
             return
         }
 
         val newPlaylist = currentPlaylist.toMutableList()
         val insertIndex = (currentIndex + 1).coerceIn(0, newPlaylist.size)
-        
-        // 检查歌曲是否已存在于队列中
+
         val existingIndex = newPlaylist.indexOfFirst { it.id == song.id && it.album == song.album }
         if (existingIndex != -1) {
             newPlaylist.removeAt(existingIndex)
-            // 调整插入位置
+
             val adjustedInsertIndex = if (existingIndex < insertIndex) insertIndex - 1 else insertIndex
             newPlaylist.add(adjustedInsertIndex, song)
         } else {
-            // 如果歌曲不存在，直接插入
+
             newPlaylist.add(insertIndex, song)
         }
 
-        // 更新播放队列
         currentPlaylist = newPlaylist
         _currentQueueFlow.value = currentPlaylist
-        
-        // 如果启用了随机播放，需要重建随机播放袋
+
         if (player.shuffleModeEnabled) {
             rebuildShuffleBag()
         }
-        
+
         ioScope.launch {
             persistState()
         }
     }
 
-    /**
-     * 将歌曲添加到播放队列的末尾
-     * @param song 要添加的歌曲
-     */
     fun addToQueueEnd(song: SongItem) {
         if (currentPlaylist.isEmpty()) {
-            // 如果当前没有播放队列，直接播放这首歌
+
             playPlaylist(listOf(song), 0)
             return
         }
 
         val newPlaylist = currentPlaylist.toMutableList()
-        
-        // 检查歌曲是否已存在于队列中
+
         val existingIndex = newPlaylist.indexOfFirst { it.id == song.id && it.album == song.album }
         if (existingIndex != -1) {
             newPlaylist.removeAt(existingIndex)
         }
-        
+
         newPlaylist.add(song)
 
-        // 更新播放队列
         currentPlaylist = newPlaylist
         _currentQueueFlow.value = currentPlaylist
-        
-        // 如果启用了随机播放，需要重建随机播放袋
+
         if (player.shuffleModeEnabled) {
             rebuildShuffleBag()
         }
@@ -1054,7 +964,6 @@ object PlayerManager {
             NPLogger.w("NERI-PlayerManager", "Failed to restore state: ${e.message}")
         }
     }
-
 
     fun replaceMetadataFromSearch(originalSong: SongItem, selectedSong: SongSearchInfo) {
         ioScope.launch {
@@ -1136,7 +1045,7 @@ object PlayerManager {
 
 private fun BiliVideoItem.toSongItem(): SongItem {
     return SongItem(
-        id = this.id, // avid
+        id = this.id,
         name = this.title,
         artist = this.uploader,
         album = PlayerManager.BILI_SOURCE_TAG,

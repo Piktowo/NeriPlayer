@@ -1,28 +1,5 @@
 package moe.ouom.neriplayer.ui.component
 
-/*
- * NeriPlayer - A unified Android player for streaming music and videos from multiple online platforms.
- * Copyright (C) 2025-2025 NeriPlayer developers
- * https://github.com/cwuom/NeriPlayer
- *
- * This software is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
- *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software.
- * If not, see <https://www.gnu.org/licenses/>.
- *
- * File: moe.ouom.neriplayer.ui.component/AppleMusicLyric
- * Created: 2025/8/13
- */
-
 import android.annotation.SuppressLint
 import android.os.Build
 import androidx.compose.animation.Crossfade
@@ -109,22 +86,19 @@ data class LyricVisualSpec(
 
     val glowAlpha: Float = 0.85f,
 
-    // 动效参数
-    val glowMoveSmoothingMs: Int = 110,   // 跟随位移的平滑
+    val glowMoveSmoothingMs: Int = 110,
     val glowPulseStiffness: Float = Spring.StiffnessMedium,
     val glowPulseDamping: Float = 0.72f,
 
     val flipDurationMs: Int = 260
 )
 
-/** 单词/字的时间戳 */
 data class WordTiming(
     val startTimeMs: Long,
     val endTimeMs: Long,
     val charCount: Int = 0
 )
 
-/** 一行歌词 */
 data class LyricEntry(
     val text: String,
     val startTimeMs: Long,
@@ -132,9 +106,6 @@ data class LyricEntry(
     val words: List<WordTiming>? = null
 )
 
-/**
- * 根据当前时间计算该行的高亮进度（0f..1f），基于字符数进行精确计算
- */
 fun calculateLineProgress(line: LyricEntry, currentTimeMs: Long): Float {
     val start = line.startTimeMs
     val end = line.endTimeMs
@@ -171,7 +142,7 @@ fun calculateLineProgress(line: LyricEntry, currentTimeMs: Long): Float {
 
     return 1f
 }
-/** 找到当前时间所在的行索引 */
+
 fun findCurrentLineIndex(lines: List<LyricEntry>, currentTimeMs: Long): Int {
     if (lines.isEmpty()) return -1
     for (i in lines.indices) {
@@ -180,7 +151,6 @@ fun findCurrentLineIndex(lines: List<LyricEntry>, currentTimeMs: Long): Int {
     return lines.lastIndex
 }
 
-/** 上下渐隐 */
 fun Modifier.verticalEdgeFade(fadeHeight: Dp): Modifier = this
     .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
     .drawWithContent {
@@ -228,11 +198,10 @@ fun AppleMusicLyric(
             isAutoScrolling = true
             listState.animateScrollToItem(currentIndex)
             isAutoScrolling = false
-            isUserScrolling = false // Explicitly reset here
+            isUserScrolling = false
         }
     }
 
-    // 去抖滚动状态，避免边界抖动触发闪烁
     LaunchedEffect(listState, isAutoScrolling) {
         snapshotFlow { listState.isScrollInProgress && !isAutoScrolling }
             .debounce(180)
@@ -368,14 +337,8 @@ fun AppleMusicLyric(
     }
 }
 
-
-/**
- * 解析网易云 yrc（逐字/逐词）
- * 示例：[12580,3470](12580,250,0)难(12830,300,0)以...
- * 会把每段文字的长度写入 WordTiming.charCount，用于多行逐字揭示
- */
 fun parseNeteaseYrc(yrc: String): List<LyricEntry> {
-//    NPLogger.d("parseYrc-N", yrc)
+
     val out = mutableListOf<LyricEntry>()
     val headerRegex = Regex("""\[(\d+),\s*(\d+)]""")
     val segRegex = Regex("""\((\d+),\s*(\d+),\s*[-\d]+\)([^()\n\r]+)""")
@@ -418,7 +381,6 @@ fun parseNeteaseYrc(yrc: String): List<LyricEntry> {
     return out.sortedBy { it.startTimeMs }
 }
 
-/** 小数字符偏移的多行 reveal */
 @Composable
 fun Modifier.multilineGradientReveal(
     layout: TextLayoutResult?,
@@ -429,7 +391,7 @@ fun Modifier.multilineGradientReveal(
     .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
     .drawWithContent {
         if (layout == null || textLength == 0 || revealOffsetChars <= 0f) {
-            // 如果不需要揭示，直接返回
+
             return@drawWithContent
         }
 
@@ -504,9 +466,7 @@ fun Modifier.multilineGradientReveal(
             )
         }
     }
-/**
- * 顶层当前行
- */
+
 @Composable
 fun AppleMusicActiveLine(
     line: LyricEntry,
@@ -544,8 +504,6 @@ fun AppleMusicActiveLine(
         mergeWordTimings(line.words)
     }
 
-
-
     val isWordCurrentlyActive = remember(mergedWords, currentTimeMs) {
         findActiveWord(mergedWords, currentTimeMs) != null
     }
@@ -572,7 +530,7 @@ fun AppleMusicActiveLine(
             if (layout != null && headGlowRadiusPx > 0f) {
                 drawRadialHeadGlow(
                     layout = layout!!,
-                    charOffset = revealOffsetChars, // 使用逐字动画的精确偏移
+                    charOffset = revealOffsetChars,
                     radiusPx = headGlowRadiusPx,
                     color = spec.glowColor,
                     alpha = headGlowAlpha
@@ -606,22 +564,17 @@ fun AppleMusicActiveLine(
     }
 }
 
-
 data class ActiveWord(val range: IntRange, val sustainWeight: Float, val tInWord: Float)
 
-/**
- * 解析 LRC（逐句）。支持 [mm:ss.SSS] 或 [mm:ss]。
- * 没有逐字信息时，逐字揭示会按整句线性推进
- */
 fun parseNeteaseLrc(lrc: String): List<LyricEntry> {
-//    NPLogger.d("parseLyc-N", lrc)
+
     val tag = Regex("""\[(\d{2}):(\d{2})(?:\.(\d{2,3}))?]""")
     val timeline = mutableListOf<Pair<Long, String>>()
 
     lrc.lineSequence().forEach { raw ->
         val line = raw.trim()
         if (line.isEmpty()) return@forEach
-        if (line.startsWith("{") || line.startsWith("}")) return@forEach // 过滤 JSON 段
+        if (line.startsWith("{") || line.startsWith("}")) return@forEach
 
         val m = tag.find(line) ?: return@forEach
         val mm = m.groupValues[1].toInt()
@@ -647,7 +600,6 @@ fun parseNeteaseLrc(lrc: String): List<LyricEntry> {
     return out
 }
 
-/** 径向头部光晕 */
 private fun DrawScope.drawRadialHeadGlow(
     layout: TextLayoutResult,
     charOffset: Float,
@@ -695,9 +647,6 @@ private fun DrawScope.drawRadialHeadGlow(
     )
 }
 
-/**
- * 将单词时间戳合并的逻辑提取出来
- */
 private fun mergeWordTimings(words: List<WordTiming>?, mergeGapMs: Long = 90L): List<Triple<IntRange, Long, Long>> {
     if (words.isNullOrEmpty()) return emptyList()
 
@@ -732,9 +681,6 @@ private fun mergeWordTimings(words: List<WordTiming>?, mergeGapMs: Long = 90L): 
     return merged
 }
 
-/**
- * 从已合并的列表中查找当前活动的单词
- */
 private fun findActiveWord(
     mergedWords: List<Triple<IntRange, Long, Long>>,
     t: Long,

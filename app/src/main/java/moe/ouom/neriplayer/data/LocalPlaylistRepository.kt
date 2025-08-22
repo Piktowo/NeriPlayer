@@ -1,28 +1,5 @@
 package moe.ouom.neriplayer.data
 
-/*
- * NeriPlayer - A unified Android player for streaming music and videos from multiple online platforms.
- * Copyright (C) 2025-2025 NeriPlayer developers
- * https://github.com/cwuom/NeriPlayer
- *
- * This software is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
- *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software.
- * If not, see <https://www.gnu.org/licenses/>.
- *
- * File: moe.ouom.neriplayer.data/LocalPlaylistRepository
- * Created: 2025/8/11
- */
-
 import android.annotation.SuppressLint
 import android.content.Context
 import com.google.gson.Gson
@@ -34,17 +11,12 @@ import kotlinx.coroutines.withContext
 import moe.ouom.neriplayer.ui.viewmodel.playlist.SongItem
 import java.io.File
 
-/** 本地歌单数据模型 */
 data class LocalPlaylist(
     val id: Long,
     val name: String,
     val songs: MutableList<SongItem> = mutableListOf()
 )
 
-/**
- * 管理本地歌单与收藏的仓库
- * 所有数据持久化到应用 filesDir 下的 JSON 文件中
- */
 class LocalPlaylistRepository private constructor(private val context: Context) {
     private val gson = Gson()
     private val file: File = File(context.filesDir, "local_playlists.json")
@@ -73,7 +45,6 @@ class LocalPlaylistRepository private constructor(private val context: Context) 
         saveToDisk()
     }
 
-    // 原子写
     private fun saveToDisk() {
         runCatching {
             val json = gson.toJson(_playlists.value)
@@ -87,7 +58,6 @@ class LocalPlaylistRepository private constructor(private val context: Context) 
         }
     }
 
-    /** 创建一个新的本地歌单 */
     suspend fun createPlaylist(name: String) {
         withContext(Dispatchers.IO) {
             val list = _playlists.value.toMutableList()
@@ -97,13 +67,11 @@ class LocalPlaylistRepository private constructor(private val context: Context) 
         }
     }
 
-    /** 将歌曲添加到“我喜欢的音乐” */
     suspend fun addToFavorites(song: SongItem) {
         val fav = _playlists.value.firstOrNull { it.name == FAVORITES_NAME } ?: return
         addSongToPlaylist(fav.id, song)
     }
 
-    /** 重命名歌单（收藏夹禁止） */
     suspend fun renamePlaylist(playlistId: Long, newName: String) {
         withContext(Dispatchers.IO) {
             val updated = _playlists.value.map { pl ->
@@ -116,7 +84,6 @@ class LocalPlaylistRepository private constructor(private val context: Context) 
         }
     }
 
-    /** 批量删除 */
     suspend fun removeSongsFromPlaylist(playlistId: Long, songIds: List<Long>) {
         withContext(Dispatchers.IO) {
             if (songIds.isEmpty()) return@withContext
@@ -136,7 +103,6 @@ class LocalPlaylistRepository private constructor(private val context: Context) 
         }
     }
 
-    /** 删除指定歌单（收藏夹禁止） -> 返回是否删除成功 */
     suspend fun deletePlaylist(playlistId: Long): Boolean {
         return withContext(Dispatchers.IO) {
             val list = _playlists.value.toMutableList()
@@ -149,7 +115,6 @@ class LocalPlaylistRepository private constructor(private val context: Context) 
         }
     }
 
-    /** 按索引移动一首歌 */
     suspend fun moveSong(playlistId: Long, fromIndex: Int, toIndex: Int) {
         withContext(Dispatchers.IO) {
             val updated = _playlists.value.map { pl ->
@@ -167,7 +132,6 @@ class LocalPlaylistRepository private constructor(private val context: Context) 
         }
     }
 
-    /** 原子重排 */
     suspend fun reorderSongs(playlistId: Long, newOrderIds: List<Long>) {
         withContext(Dispatchers.IO) {
             val list = _playlists.value.toMutableList()
@@ -177,7 +141,7 @@ class LocalPlaylistRepository private constructor(private val context: Context) 
 
             val byId = pl.songs.associateBy { it.id }
             val ordered = newOrderIds.mapNotNull { byId[it] }.toMutableList()
-            // 防御：把遗漏的旧歌拼回末尾，避免丢失
+
             pl.songs.forEach { s -> if (ordered.none { it.id == s.id }) ordered.add(s) }
 
             list[idx] = pl.copy(songs = ordered)
@@ -186,7 +150,6 @@ class LocalPlaylistRepository private constructor(private val context: Context) 
         }
     }
 
-    /** 将歌曲添加到指定歌单 */
     suspend fun addSongsToPlaylist(playlistId: Long, songs: List<SongItem>) {
         withContext(Dispatchers.IO) {
             val list = _playlists.value.toMutableList()
@@ -204,12 +167,10 @@ class LocalPlaylistRepository private constructor(private val context: Context) 
         }
     }
 
-    /** 将“单首”添加到指定歌单 */
     suspend fun addSongToPlaylist(playlistId: Long, song: SongItem) {
         addSongsToPlaylist(playlistId, listOf(song))
     }
 
-    /** 从指定歌单移除歌曲 */
     suspend fun removeSongFromPlaylist(playlistId: Long, songId: Long) {
         withContext(Dispatchers.IO) {
             val list = _playlists.value.toMutableList()
@@ -225,12 +186,11 @@ class LocalPlaylistRepository private constructor(private val context: Context) 
         }
     }
 
-    /** 从一个歌单导出（拷贝）多首歌到另一个歌单（保持源内相对顺序；自动去重） */
     suspend fun exportSongsToPlaylist(sourcePlaylistId: Long, targetPlaylistId: Long, songIds: List<Long>) {
         withContext(Dispatchers.IO) {
             val source = _playlists.value.firstOrNull { it.id == sourcePlaylistId } ?: return@withContext
             val inSourceOrder = songIds.mapNotNull { id -> source.songs.firstOrNull { it.id == id } }
-            // 直接调用批量添加（会自动去重）
+
             val list = _playlists.value.toMutableList()
             val idx = list.indexOfFirst { it.id == targetPlaylistId }
             if (idx == -1) return@withContext
@@ -260,7 +220,6 @@ class LocalPlaylistRepository private constructor(private val context: Context) 
         }
     }
 
-    /** 从“我喜欢的音乐”移除歌曲 */
     suspend fun removeFromFavorites(songId: Long) {
         withContext(Dispatchers.IO) {
             val updated = _playlists.value.map { pl ->
@@ -293,7 +252,6 @@ class LocalPlaylistRepository private constructor(private val context: Context) 
         }
     }
 
-    /** 批量更新歌单列表 */
     suspend fun updatePlaylists(playlists: List<LocalPlaylist>) {
         withContext(Dispatchers.IO) {
             _playlists.value = playlists

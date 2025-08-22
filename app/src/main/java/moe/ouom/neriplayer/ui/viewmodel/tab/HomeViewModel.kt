@@ -1,28 +1,5 @@
 package moe.ouom.neriplayer.ui.viewmodel.tab
 
-/*
- * NeriPlayer - A unified Android player for streaming music and videos from multiple online platforms.
- * Copyright (C) 2025-2025 NeriPlayer developers
- * https://github.com/cwuom/NeriPlayer
- *
- * This software is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
- *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software.
- * If not, see <https://www.gnu.org/licenses/>.
- *
- * File: moe.ouom.neriplayer.ui.viewmodel/ExploreViewModel
- * Created: 2025/8/10
- */
-
 import android.app.Application
 import android.os.Parcelable
 import androidx.lifecycle.AndroidViewModel
@@ -46,7 +23,6 @@ data class HomeUiState(
     val playlists: List<NeteasePlaylist> = emptyList()
 )
 
-/** UI 使用的精简数据模型 */
 @Parcelize
 data class NeteasePlaylist(
     val id: Long,
@@ -65,7 +41,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     val uiState: StateFlow<HomeUiState> = _uiState
 
     init {
-        // 登录后自动刷新
+
         viewModelScope.launch {
             repo.cookieFlow.collect { raw ->
                 val cookies = raw.toMutableMap()
@@ -77,11 +53,10 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
         }
-        // 首次进入也拉一次
+
         refreshRecommend()
     }
 
-    /** 拉首页推荐 */
     fun refreshRecommend() {
         _uiState.value = _uiState.value.copy(loading = true, error = null)
         viewModelScope.launch {

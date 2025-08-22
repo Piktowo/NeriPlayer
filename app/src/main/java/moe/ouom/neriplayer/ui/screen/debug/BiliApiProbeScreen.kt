@@ -1,27 +1,5 @@
 package moe.ouom.neriplayer.ui.screen.debug
 
-/*
- * NeriPlayer - A unified Android player for streaming music and videos from multiple online platforms.
- * Copyright (C) 2025-2025 NeriPlayer developers
- * https://github.com/cwuom/NeriPlayer
- *
- * This software is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
- *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software.
- * If not, see <https://www.gnu.org/licenses/>.
- *
- * File: moe.ouom.neriplayer.ui.screen.debug/BiliApiProbeScreen
- * Created: 2025/8/14
- */
 import android.app.Application
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -81,7 +59,7 @@ fun BiliApiProbeScreen() {
                 Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // 搜索
+
                 OutlinedTextField(
                     value = ui.keyword,
                     onValueChange = vm::onKeywordChange,
@@ -97,7 +75,6 @@ fun BiliApiProbeScreen() {
 
                 Spacer(Modifier.height(8.dp))
 
-                // 基础信息
                 OutlinedTextField(
                     value = ui.bvid,
                     onValueChange = vm::onBvidChange,
@@ -113,7 +90,6 @@ fun BiliApiProbeScreen() {
 
                 Spacer(Modifier.height(8.dp))
 
-                // 分P和CID输入
                 Text("分P 设置（二选一）", style = MaterialTheme.typography.labelMedium)
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -134,7 +110,6 @@ fun BiliApiProbeScreen() {
                     )
                 }
 
-                // 取流按钮组
                 Button(
                     onClick = { vm.playInfoByBvidCidAndCopy() },
                     enabled = !ui.running && ui.bvid.isNotBlank() && (ui.cid.isNotBlank() || ui.page.isNotBlank()),
@@ -182,7 +157,6 @@ fun BiliApiProbeScreen() {
 
                 Spacer(Modifier.height(8.dp))
 
-                // 点赞近况
                 Button(
                     onClick = { vm.hasLikeByBvidAndCopy() },
                     enabled = !ui.running && ui.bvid.isNotBlank(),
@@ -191,7 +165,6 @@ fun BiliApiProbeScreen() {
 
                 Spacer(Modifier.height(8.dp))
 
-                // 收藏夹
                 OutlinedTextField(
                     value = ui.upMid,
                     onValueChange = vm::onUpMidChange,

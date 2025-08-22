@@ -1,29 +1,5 @@
 package moe.ouom.neriplayer.ui.screen.tab
 
-/*
- * NeriPlayer - A unified Android player for streaming music and videos from multiple online platforms.
- * Copyright (C) 2025-2025 NeriPlayer developers
- * https://github.com/cwuom/NeriPlayer
- *
- * This software is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
- *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software.
- * If not, see <https://www.gnu.org/licenses/>.
- *
- * File: moe.ouom.neriplayer.ui.screen.tab/HomeScreen
- * Created: 2025/8/8
- */
-
-
 import android.app.Application
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -97,7 +73,6 @@ fun HomeScreen(
     )
     val appBarTitle = rememberSaveable { titleOptions.random() }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
-
 
     Column(
         Modifier
@@ -180,7 +155,7 @@ fun HomeScreen(
                     ) {
                         items(
                             items = ui.playlists,
-                            key = { it.id } // 稳定 key，帮助恢复与过渡
+                            key = { it.id }
                         ) { item ->
                             PlaylistCard(item) { onItemClick(item) }
                         }

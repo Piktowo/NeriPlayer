@@ -1,28 +1,5 @@
 package moe.ouom.neriplayer.ui.viewmodel.tab
 
-/*
- * NeriPlayer - A unified Android player for streaming music and videos from multiple online platforms.
- * Copyright (C) 2025-2025 NeriPlayer developers
- * https://github.com/cwuom/NeriPlayer
- *
- * This software is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
- *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software.
- * If not, see <https://www.gnu.org/licenses/>.
- *
- * File: moe.ouom.neriplayer.ui.viewmodel/LibraryViewModel
- * Created: 2025/8/11
- */
-
 import android.app.Application
 import android.os.Parcelable
 import androidx.lifecycle.AndroidViewModel
@@ -43,7 +20,6 @@ import moe.ouom.neriplayer.util.NPLogger
 import org.json.JSONObject
 import java.io.IOException
 
-/** Bilibili 收藏夹数据模型 */
 @Parcelize
 data class BiliPlaylist(
     val mediaId: Long,
@@ -54,8 +30,6 @@ data class BiliPlaylist(
     val coverUrl: String
 ) : Parcelable
 
-
-/** 媒体库页面 UI 状态 */
 data class LibraryUiState(
     val localPlaylists: List<LocalPlaylist> = emptyList(),
     val neteasePlaylists: List<NeteasePlaylist> = emptyList(),
@@ -73,21 +47,19 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
     private val biliCookieRepo = AppContainer.biliCookieRepo
     private val biliClient = AppContainer.biliClient
 
-
     private val _uiState = MutableStateFlow(
         LibraryUiState(localPlaylists = localRepo.playlists.value)
     )
     val uiState: StateFlow<LibraryUiState> = _uiState
 
     init {
-        // 本地歌单
+
         viewModelScope.launch {
             localRepo.playlists.collect { list ->
                 _uiState.value = _uiState.value.copy(localPlaylists = list)
             }
         }
 
-        // 网易云
         viewModelScope.launch {
             neteaseCookieRepo.cookieFlow.collect { cookies ->
                 val mutable = cookies.toMutableMap()
@@ -100,7 +72,6 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
             }
         }
 
-        // Bilibili
         viewModelScope.launch {
             biliCookieRepo.cookieFlow.collect { cookies ->
                 if (!cookies["SESSDATA"].isNullOrBlank()) {
@@ -122,7 +93,6 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
                 }
                 val rawList = withContext(Dispatchers.IO) { biliClient.getUserCreatedFavFolders(mid) }
 
-                // 并发获取每个收藏夹的详细信息
                 val mapped = withContext(Dispatchers.IO) {
                     rawList.map { folder ->
                         async {
@@ -137,7 +107,7 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
                                     coverUrl = folderInfo.coverUrl.replace("http://", "https://")
                                 )
                             } catch (e: Exception) {
-                                // 获取详情失败，使用原始数据并提供一个空的封面URL
+
                                 NPLogger.e("LibraryViewModel-Bili", "获取详情失败",e)
                                 BiliPlaylist(
                                     mediaId = folder.mediaId,
@@ -162,7 +132,6 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
             }
         }
     }
-
 
     fun refreshNetease() {
         viewModelScope.launch {

@@ -1,28 +1,5 @@
 package moe.ouom.neriplayer.ui
 
-/*
- * NeriPlayer - A unified Android player for streaming music and videos from multiple online platforms.
- * Copyright (C) 2025-2025 NeriPlayer developers
- * https://github.com/cwuom/NeriPlayer
- *
- * This software is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
- *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software.
- * If not, see <https://www.gnu.org/licenses/>.
- *
- * File: moe.ouom.neriplayer.ui/NeriApp
- * Created: 2025/8/8
- */
-
 import android.app.Application
 import android.content.Intent
 import androidx.activity.compose.BackHandler
@@ -148,14 +125,13 @@ fun NeriApp(
         )
     }
 
-
     val isDark = when {
         forceDark -> true
         followSystemDark -> isSystemInDarkTheme()
         else -> false
     }
     LaunchedEffect(Unit) {
-        // 初始化播放器并在已有播放队列时同步到前台服务
+
         PlayerManager.initialize(context.applicationContext as Application)
         NPLogger.d("NERI-App", "PlayerManager.initialize called")
         NPLogger.d("PlayerManager.hasItems()", PlayerManager.hasItems().toString())
@@ -175,7 +151,6 @@ fun NeriApp(
     val preferredQuality by repo.audioQualityFlow.collectAsState(initial = "exhigh")
     val biliPreferredQuality by repo.biliAudioQualityFlow.collectAsState(initial = "high")
 
-
     CompositionLocalProvider(LocalDensity provides finalDensity) {
         NeriTheme(
             followSystemDark = followSystemDark,
@@ -188,7 +163,6 @@ fun NeriApp(
             val currentRoute = backEntry?.destination?.route
 
             val snackbarHostState = remember { SnackbarHostState() }
-
 
             DisposableEffect(showNowPlaying) {
                 AudioReactive.enabled = showNowPlaying
@@ -399,7 +373,6 @@ fun NeriApp(
                                     )
                                 }
 
-
                                 composable(
                                     route = Destinations.BiliPlaylistDetail.route,
                                     arguments = listOf(navArgument("playlistJson") {
@@ -435,7 +408,7 @@ fun NeriApp(
                                                 "Playing audio from Bili video: ${videos[index].title}"
                                             )
                                             PlayerManager.playBiliVideoAsAudio(videos, index)
-                                            showNowPlaying = true // 显示播放界面
+                                            showNowPlaying = true
                                         },
                                         onPlayParts = { videoInfo, index, coverUrl ->
                                             NPLogger.d(
@@ -572,8 +545,6 @@ fun NeriApp(
                                         }
                                     )
                                 }
-
-
 
                                 composable(
                                     route = Destinations.LocalPlaylistDetail.route,
@@ -856,8 +827,6 @@ fun NeriApp(
                         }
                     }
                 }
-
-
 
                 AnimatedVisibility(
                     visible = showNowPlaying,

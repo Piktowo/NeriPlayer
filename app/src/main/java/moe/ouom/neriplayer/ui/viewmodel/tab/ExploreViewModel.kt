@@ -1,28 +1,5 @@
 package moe.ouom.neriplayer.ui.viewmodel.tab
 
-/*
- * NeriPlayer - A unified Android player for streaming music and videos from multiple online platforms.
- * Copyright (C) 2025-2025 NeriPlayer developers
- * https://github.com/cwuom/NeriPlayer
- *
- * This software is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
- *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software.
- * If not, see <https://www.gnu.org/licenses/>.
- *
- * File: moe.ouom.neriplayer.ui.viewmodel/ExploreViewModel
- * Created: 2025/8/11
- */
-
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -41,10 +18,6 @@ import org.json.JSONObject
 
 private const val TAG = "NERI-ExploreVM"
 
-/**
- * 定义搜索源
- * @param displayName 用于在UI上显示的名称
- */
 enum class SearchSource(val displayName: String) {
     NETEASE("网易云"),
     BILIBILI("哔哩哔哩")
@@ -76,17 +49,15 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    /** 设置当前搜索源 */
     fun setSearchSource(source: SearchSource) {
         if (source == _uiState.value.selectedSearchSource) return
         _uiState.value = _uiState.value.copy(
             selectedSearchSource = source,
-            searchResults = emptyList(), // 切换源时清空结果
+            searchResults = emptyList(),
             searchError = null
         )
     }
 
-    /** 统一搜索入口 */
     fun search(keyword: String) {
         if (keyword.isBlank()) {
             _uiState.value = _uiState.value.copy(searchResults = emptyList(), searchError = null)
@@ -98,7 +69,6 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    /** 搜索 Bilibili 视频 */
     private fun searchBilibili(keyword: String) {
         _uiState.value = _uiState.value.copy(searching = true, searchError = null)
         viewModelScope.launch {
@@ -106,7 +76,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                 val searchPage = withContext(Dispatchers.IO) {
                     biliClient.searchVideos(keyword = keyword, page = 1)
                 }
-                // 将B站搜索结果转换为通用的 SongItem
+
                 val songs = searchPage.items.map { it.toSongItem() }
                 _uiState.value = _uiState.value.copy(
                     searching = false,
@@ -170,7 +140,6 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
         return result
     }
 
-    /** 搜索网易云歌曲 */
     private fun searchNetease(keyword: String) {
         _uiState.value = _uiState.value.copy(searching = true, searchError = null)
         viewModelScope.launch {
@@ -223,17 +192,10 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    /**
-     * 将 Bilibili 视频的分P转换为通用的 SongItem
-     * @param page 分P信息
-     * @param basicInfo 视频的基本信息
-     * @param coverUrl 视频封面
-     * @return 转换后的 SongItem
-     */
     fun toSongItem(page: BiliClient.VideoPage, basicInfo: BiliClient.VideoBasicInfo, coverUrl: String): SongItem {
         return SongItem(
-            id = basicInfo.aid * 10000 + page.page, // 使用 avid 和 page 组合成唯一 ID
-            name = page.part, // 直接使用分P的标题作为歌曲名
+            id = basicInfo.aid * 10000 + page.page,
+            name = page.part,
             artist = basicInfo.ownerName,
             album = PlayerManager.BILI_SOURCE_TAG,
             durationMs = page.durationSec * 1000L,
@@ -242,13 +204,12 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
     }
 }
 
-/** Bilibili 搜索结果到通用 SongItem 的转换器 */
 private fun BiliClient.SearchVideoItem.toSongItem(): SongItem {
     return SongItem(
-        id = this.aid, // 使用 avid 作为唯一ID
+        id = this.aid,
         name = this.titlePlain,
         artist = this.author,
-        album = PlayerManager.BILI_SOURCE_TAG, // 标记来源
+        album = PlayerManager.BILI_SOURCE_TAG,
         durationMs = this.durationSec * 1000L,
         coverUrl = this.coverUrl
     )

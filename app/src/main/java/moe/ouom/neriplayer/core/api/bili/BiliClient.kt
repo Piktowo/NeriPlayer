@@ -1,28 +1,5 @@
 package moe.ouom.neriplayer.core.api.bili
 
-/*
- * NeriPlayer - A unified Android player for streaming music and videos from multiple online platforms.
- * Copyright (C) 2025-2025 NeriPlayer developers
- * https://github.com/cwuom/NeriPlayer
- *
- * This software is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
- *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software.
- * If not, see <https://www.gnu.org/licenses/>.
- *
- * File: moe.ouom.neriplayer.core.api.bili/BiliClient
- * Updated: 2025/08/14
- */
-
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -47,9 +24,6 @@ import java.util.concurrent.TimeUnit
 import kotlin.math.max
 import moe.ouom.neriplayer.util.DynamicProxySelector
 
-/**
- * B 站 Web 端 API 客户端
- */
 class BiliClient(
     private val cookieRepo: BiliCookieRepository = AppContainer.biliCookieRepo,
     client: OkHttpClient? = null,
@@ -59,37 +33,29 @@ class BiliClient(
     companion object {
         private const val TAG = "NERI-BiliClient"
 
-        // 官方接口 / WBI
         private const val BASE_PLAY_URL = "https://api.bilibili.com/x/player/wbi/playurl"
         private const val NAV_URL = "https://api.bilibili.com/x/web-interface/nav"
 
-        // 基础信息（WBI 可用）
         private const val VIEW_URL = "https://api.bilibili.com/x/web-interface/wbi/view"
         private const val VIEW_DETAIL_URL = "https://api.bilibili.com/x/web-interface/wbi/view/detail"
 
-        // 搜索（WBI）
         private const val SEARCH_TYPE_URL = "https://api.bilibili.com/x/web-interface/wbi/search/type"
 
-        // 点赞近况
         private const val HAS_LIKE_URL = "https://api.bilibili.com/x/web-interface/archive/has/like"
 
-        // 收藏夹
         private const val FAV_FOLDER_CREATED_LIST_ALL = "https://api.bilibili.com/x/v3/fav/folder/created/list-all"
         private const val FAV_FOLDER_INFO = "https://api.bilibili.com/x/v3/fav/folder/info"
         private const val FAV_RESOURCE_LIST = "https://api.bilibili.com/x/v3/fav/resource/list"
         private const val FAV_RESOURCE_IDS = "https://api.bilibili.com/x/v3/fav/resource/ids"
         private const val PAGELIST_URL = "https://api.bilibili.com/x/player/pagelist"
 
-        /** 默认 UA（Web） */
         private const val DEFAULT_WEB_UA =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
                     "AppleWebKit/537.36 (KHTML, like Gecko) " +
                     "Chrome/124.0.0.0 Safari/537.36"
 
-        /** 默认 Referer */
         private const val REFERER = "https://www.bilibili.com"
 
-        /** Wbi mixin 索引表 */
         private val MIXIN_INDEX = intArrayOf(
             46, 47, 18, 2, 53, 8, 23, 32, 15, 50, 10, 31, 58, 3, 45, 35,
             27, 43, 5, 49, 33, 9, 42, 19, 29, 28, 14, 39, 12, 38, 41, 13,
@@ -97,15 +63,12 @@ class BiliClient(
             22, 25, 54, 21, 56, 62, 6, 63, 57, 20, 34, 52, 59, 11, 36, 44
         )
 
-        /** Wbi key 缓存时间 */
         private const val WBI_CACHE_MS = 10 * 60 * 1000L
 
-        // ---- fnval 位 ----
-        /** DASH 开关（必开，否则只有 durl/mp4） */
-        const val FNVAL_DASH = 1 shl 4  // 16
-        /** 杜比音频（E-AC-3/Atmos），要拿 dolby.audio 必开 */
-        const val FNVAL_DOLBY = 1 shl 8  // 256
-        /** 其它位（如 AV1/HDR/8K 等）按需再开，这里不强制 */
+        const val FNVAL_DASH = 1 shl 4
+
+        const val FNVAL_DOLBY = 1 shl 8
+
     }
 
     private val http: OkHttpClient = client ?: OkHttpClient.Builder()
@@ -115,26 +78,25 @@ class BiliClient(
         .proxySelector(DynamicProxySelector)
         .build()
 
-    // 外部可用的数据结构
     data class PlayOptions(
-        /** 画质 qn；DASH 下此参数基本无效（会返回所有可用轨） */
+
         val qn: Int? = null,
-        /** 流格式标识，推荐：DASH + Dolby，确保能下发普通音轨与杜比音轨 */
+
         val fnval: Int = FNVAL_DASH or FNVAL_DOLBY,
         val fnver: Int = 0,
-        /** 允许 4K（配合 qn=120 & fourk=1），对音轨无影响 */
+
         val fourk: Int = 0,
-        /** 平台：pc（默认，需 Referer），html5（无 Referer 校验，仅 MP4） */
+
         val platform: String = "pc",
-        /** platform=html5 时为 1 可拉 1080p（high_quality=1） */
+
         val highQuality: Int? = null,
-        /** 未登录试拉较高画质（64/80），1 开启 */
+
         val tryLook: Int? = null,
-        /** session 透传 */
+
         val session: String? = null,
-        /** 可选：gaia_source，无 Cookie 时有时需要（view-card / pre-load） */
+
         val gaiaSource: String? = null,
-        /** 可选：isGaiaAvoided */
+
         val isGaiaAvoided: Boolean? = null,
     )
 
@@ -169,10 +131,6 @@ class BiliClient(
         val audio: DashStream?
     )
 
-    /**
-     * 统一的播放信息封装
-     * MP4 看 durl；DASH 看 dashVideo/dashAudio
-     */
     data class PlayInfo(
         val code: Int,
         val message: String,
@@ -181,17 +139,15 @@ class BiliClient(
         val timeLengthMs: Long?,
         val acceptDescription: List<String>,
         val acceptQuality: List<Int>,
-        // MP4
+
         val durl: List<Durl>,
-        // DASH
+
         val dashVideo: List<DashStream>,
         val dashAudio: List<DashStream>,
         val dolby: DolbyAudio?,
         val flac: FlacAudio?,
         val raw: JSONObject
     )
-
-    // 视频基础信息 / 搜索 / 收藏夹
 
     data class VideoStats(
         val view: Long,
@@ -261,8 +217,8 @@ class BiliClient(
     )
 
     data class FavResourceItem(
-        val type: Int,           // 2: 视频稿件, 12: 音频, 21: 合集
-        val id: Long,           // 对应 avid/auid/合集 id
+        val type: Int,
+        val id: Long,
         val bvid: String?,
         val title: String,
         val coverUrl: String,
@@ -281,11 +237,6 @@ class BiliClient(
         val hasMore: Boolean
     )
 
-    // 对外 API //
-
-    /**
-     * 通过 bvid + cid 获取取流信息
-     */
     suspend fun getPlayInfoByBvid(
         bvid: String,
         cid: Long,
@@ -299,9 +250,6 @@ class BiliClient(
         requestPlayUrl(params)
     }
 
-    /**
-     * 通过 avid + cid 获取取流信息
-     */
     suspend fun getPlayInfoByAvid(
         avid: Long,
         cid: Long,
@@ -315,7 +263,6 @@ class BiliClient(
         requestPlayUrl(params)
     }
 
-    // 直接拿所有可用音频流 并映射为统一结构
     suspend fun getAllAudioStreams(
         bvid: String,
         cid: Long,
@@ -325,8 +272,6 @@ class BiliClient(
         return info.toAudioStreamInfos()
     }
 
-    // 视频基础信息 //
-
     suspend fun getVideoBasicInfoByBvid(bvid: String): VideoBasicInfo =
         fetchVideoBasicInfo(mapOf("bvid" to bvid))
 
@@ -335,7 +280,7 @@ class BiliClient(
 
     private suspend fun fetchVideoBasicInfo(params: Map<String, String>): VideoBasicInfo =
         withContext(Dispatchers.IO) {
-            // 优先 WBI 版本
+
             val jo = getJsonWbi(VIEW_URL, params)
             val data = jo.optJSONObject("data") ?: JSONObject()
 
@@ -345,7 +290,6 @@ class BiliClient(
             val picRaw = data.optString("pic")
             val cover = ensureHttps(picRaw)
 
-            // desc_v2 优先，回落 desc
             val descV2 = data.optJSONArray("desc_v2")
             val desc = if (descV2 != null && descV2.length() > 0) {
                 buildString {
@@ -419,14 +363,12 @@ class BiliClient(
     suspend fun getVideoStatsByAvid(avid: Long): VideoStats =
         getVideoBasicInfoByAvid(avid).stats
 
-    // 搜索 //
-
     suspend fun searchVideos(
         keyword: String,
         page: Int = 1,
-        order: String = "totalrank", // 综合 / 最新 / 等
-        duration: Int = 0,           // 0=全部; 1:<10m; 2:10-30m; 3:30-60m; 4:>60m
-        tids: Int = 0                // 0=全部; 否则传分区 tid
+        order: String = "totalrank",
+        duration: Int = 0,
+        tids: Int = 0
     ): SearchVideoPage = withContext(Dispatchers.IO) {
         val params = mutableMapOf(
             "search_type" to "video",
@@ -476,8 +418,6 @@ class BiliClient(
         )
     }
 
-    // 点赞近况 //
-
     suspend fun hasLikedRecentlyByBvid(bvid: String): Boolean =
         queryHasLike(mapOf("bvid" to bvid))
 
@@ -487,13 +427,10 @@ class BiliClient(
     private suspend fun queryHasLike(params: Map<String, String>): Boolean =
         withContext(Dispatchers.IO) {
             val jo = getJson(HAS_LIKE_URL, params)
-            // {"code":0,"message":"0","ttl":1,"data":1}  => 1 代表近期点过赞
+
             jo.optInt("code", -1) == 0 && (jo.optInt("data", 0) == 1)
         }
 
-    // 收藏夹 //
-
-    /** 获取指定用户创建的所有收藏夹（公开 + 登录可见私密） */
     suspend fun getUserCreatedFavFolders(upMid: Long): List<FavFolder> =
         withContext(Dispatchers.IO) {
             val jo = getJson(FAV_FOLDER_CREATED_LIST_ALL, mapOf("up_mid" to upMid.toString()))
@@ -518,7 +455,6 @@ class BiliClient(
             out
         }
 
-    /** 获取收藏夹元信息 */
     suspend fun getFavFolderInfo(mediaId: Long): FavFolder =
         withContext(Dispatchers.IO) {
             val jo = getJson(FAV_FOLDER_INFO, mapOf("media_id" to mediaId.toString()))
@@ -538,15 +474,14 @@ class BiliClient(
             )
         }
 
-    /** 获取收藏夹内容明细（分页） */
     suspend fun getFavFolderContents(
         mediaId: Long,
         page: Int = 1,
         pageSize: Int = 20,
-        order: String = "mtime",   // mtime/view/pubtime
+        order: String = "mtime",
         keyword: String? = null,
-        tid: Int? = null,          // 视频分区筛选
-        scopeType: Int? = null     // 0:当前收藏夹, 1:全部收藏夹
+        tid: Int? = null,
+        scopeType: Int? = null
     ): FavResourcePage = withContext(Dispatchers.IO) {
         val params = mutableMapOf(
             "media_id" to mediaId.toString(),
@@ -605,9 +540,6 @@ class BiliClient(
         )
     }
 
-    /**
-     * 获取收藏夹内所有内容
-     */
     suspend fun getAllFavFolderItems(mediaId: Long): List<FavResourceItem> = withContext(Dispatchers.IO) {
         val folderInfo = getFavFolderInfo(mediaId)
         val totalCount = folderInfo.count
@@ -618,27 +550,22 @@ class BiliClient(
         val pageSize = 20
         val totalPages = (totalCount + pageSize - 1) / pageSize
 
-        // 并发请求所有分页
         val deferredPages = (1..totalPages).map { page ->
             async {
                 try {
-                    // 将页码与请求结果配对，以便后续排序
+
                     page to getFavFolderContents(mediaId, page = page, pageSize = pageSize).items
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to fetch page $page for mediaId $mediaId", e)
-                    page to emptyList() // 出错时返回空列表，但页码保留
+                    page to emptyList()
                 }
             }
         }
 
-        // 等待所有请求完成
         val pageResults = deferredPages.awaitAll()
 
-        // 按页码从小到大排序，然后展开并合并列表
         pageResults.sortedBy { it.first }.flatMap { it.second }
     }
-
-    // 内部实现 //
 
     private fun MutableMap<String, String>.putCommonParams(opts: PlayOptions) {
         opts.qn?.let { put("qn", it.toString()) }
@@ -655,7 +582,7 @@ class BiliClient(
     }
 
     private suspend fun requestPlayUrl(params: MutableMap<String, String>): PlayInfo {
-        // Wbi 签名
+
         val signedUrl = signWbiUrl(BASE_PLAY_URL, params)
 
         val text = executeGetAsText(signedUrl)
@@ -676,10 +603,8 @@ class BiliClient(
         val acceptDesc = data.optJSONArray("accept_description").toStringList()
         val acceptQuality = data.optJSONArray("accept_quality").toIntList()
 
-        // MP4
         val durlList = parseDurl(data.optJSONArray("durl"))
 
-        // DASH
         val dash = data.optJSONObject("dash")
         val dashVideo = parseDashArray(dash?.optJSONArray("video"))
         val dashAudio = parseDashArray(dash?.optJSONArray("audio"))
@@ -766,8 +691,6 @@ class BiliClient(
         )
     }
 
-    // 请求封装 //
-
     private suspend fun executeGetAsText(url: HttpUrl): String {
         val cookieMap = cookieRepo.getCookiesOnce()
         val cookieHeader = cookieMap.entries.joinToString("; ") { "${it.key}=${it.value}" }
@@ -799,26 +722,19 @@ class BiliClient(
         return JSONObject(text)
     }
 
-    // Wbi 签名 //
-
     private val keyMutex = Mutex()
     @Volatile
     private var cachedMixinKey: String? = null
     @Volatile
     private var cachedAt: Long = 0L
 
-    /**
-     * 将原始参数做 Wbi 加签，返回完整 URL
-     */
     private suspend fun signWbiUrl(base: String, paramsIn: Map<String, String>): HttpUrl {
         val mixinKey = getOrRefreshMixinKey()
 
-        // 复制并加入 wts；对参数值做特殊字符过滤
         val params = paramsIn.mapValues { (_, v) -> filterValue(v) }.toMutableMap()
         val wts = (System.currentTimeMillis() / 1000L).toString()
         params["wts"] = wts
 
-        // key 排序后拼接
         val sorted = params.toSortedMap()
         val query = sorted.entries.joinToString("&") { (k, v) ->
             "${urlEncode(k)}=${urlEncode(v)}"
@@ -853,10 +769,6 @@ class BiliClient(
         }
     }
 
-    /**
-     * 拉取 nav，解析 wbi_img / wbi_sub 的文件名（不含后缀）作为 imgKey/subKey，
-     * 然后执行 mixin 索引表，取前 32 位为最终 key
-     */
     private suspend fun fetchMixinKeyFromNav(): String = withContext(Dispatchers.IO) {
         val cookieMap = cookieRepo.getCookiesOnce()
         val cookieHeader = cookieMap.entries.joinToString("; ") { "${it.key}=${it.value}" }
@@ -888,9 +800,6 @@ class BiliClient(
         result
     }
 
-    // 工具 / 扩展 //
-
-    /** 只在值非空且非空白时设置 Header（避免递归） */
     private fun Request.Builder.headerIfNotBlank(name: String, value: String?): Request.Builder {
         return if (!value.isNullOrBlank()) this.header(name, value) else this
     }
@@ -955,20 +864,9 @@ class BiliClient(
     private fun JSONObject.optIntOrNull(name: String): Int? =
         if (has(name)) optInt(name) else null
 
-    // 将 PlayInfo 映射为统一的音频流结构 //
-
-    /**
-     * 合并 dash.audio + dash.dolby.audio + dash.flac.audio
-     * - 普通音轨：qualityTag = null
-     * - 杜比音轨：qualityTag = "dolby"
-     * - Hi-Res（flac）：qualityTag = "hires"
-     *
-     * bitrateKbps = bandwidth(Byte/s)*8/1000，做非负保护
-     */
     fun PlayInfo.toAudioStreamInfos(): List<BiliAudioStreamInfo> {
         val list = mutableListOf<BiliAudioStreamInfo>()
 
-        // 普通音轨
         for (a in dashAudio) {
             list += BiliAudioStreamInfo(
                 id = a.id,
@@ -979,7 +877,6 @@ class BiliClient(
             )
         }
 
-        // 杜比音轨
         dolby?.audios?.forEach { a ->
             list += BiliAudioStreamInfo(
                 id = a.id,
@@ -990,7 +887,6 @@ class BiliClient(
             )
         }
 
-        // Hi-Res（flac）
         flac?.audio?.let { a ->
             list += BiliAudioStreamInfo(
                 id = a.id,
@@ -1004,25 +900,16 @@ class BiliClient(
         return list
     }
 
-    /**
-     * 通过 bvid 获取视频分页列表
-     */
     suspend fun getVideoPageList(bvid: String): List<VideoPage> = withContext(Dispatchers.IO) {
         val jo = getJson(PAGELIST_URL, mapOf("bvid" to bvid))
         parsePageListResponse(jo)
     }
 
-    /**
-     * 通过 aid 获取视频分页列表
-     */
     suspend fun getVideoPageList(aid: Long): List<VideoPage> = withContext(Dispatchers.IO) {
         val jo = getJson(PAGELIST_URL, mapOf("aid" to aid.toString()))
         parsePageListResponse(jo)
     }
 
-    /**
-     * 解析分页列表响应
-     */
     private fun parsePageListResponse(jo: JSONObject): List<VideoPage> {
         val data = jo.optJSONArray("data") ?: JSONArray()
         val pages = ArrayList<VideoPage>(data.length())
@@ -1045,9 +932,6 @@ class BiliClient(
 
 }
 
-/**
- * 适配器：用 BiliClient 作为音频数据源，接到 BiliPlaybackRepository
- */
 class BiliClientAudioDataSource(
     override val client: BiliClient
 ) : BiliAudioDataSource {

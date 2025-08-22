@@ -1,28 +1,5 @@
 package moe.ouom.neriplayer.ui.view
 
-/*
- * NeriPlayer - A unified Android player for streaming music and videos from multiple online platforms.
- * Copyright (C) 2025-2025 NeriPlayer developers
- * https://github.com/cwuom/NeriPlayer
- *
- * This software is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
- *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software.
- * If not, see <https://www.gnu.org/licenses/>.
- *
- * File: moe.ouom.neriplayer.ui.view/HyperBackground
- * Created: 2025/8/10
- */
-
 import android.os.Build
 import android.view.View
 import androidx.compose.runtime.Composable
@@ -42,11 +19,6 @@ import kotlinx.coroutines.isActive
 import moe.ouom.neriplayer.core.player.PlayerManager
 import kotlin.math.max
 
-/**
- * 渲染 Hyper 背景
- * - Android 13+（API 33）启用 RuntimeShader；低版本自动降级为透明
- * - 通过 withFrameNanos 获取逐帧时间，驱动 BgEffectPainter
- */
 @Composable
 fun HyperBackground(
     modifier: Modifier = Modifier,
@@ -55,7 +27,6 @@ fun HyperBackground(
     val context = LocalContext.current
     val currentIsDark by rememberUpdatedState(isDark)
 
-    // 仅 T+ 创建 painter
     val painter = remember(currentIsDark) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             BgEffectPainter(context)
@@ -78,7 +49,6 @@ fun HyperBackground(
         }
     )
 
-    // 等待视图真正 ready
     suspend fun awaitViewReady(v: View) {
         while (
             !v.isAttachedToWindow ||
@@ -86,7 +56,7 @@ fun HyperBackground(
             !ViewCompat.isLaidOut(v) ||
             v.width == 0 || v.height == 0
         ) {
-            withFrameNanos { /* just wait next frame */ }
+            withFrameNanos {  }
         }
     }
 

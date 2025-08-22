@@ -49,7 +49,6 @@ android {
         buildConfigField("String", "TAG", "\"[NeriPlayer]\"")
         buildConfigField("long", "BUILD_TIMESTAMP", "${System.currentTimeMillis()}L")
 
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         renderscriptTargetApi = 31
@@ -79,7 +78,6 @@ android {
         buildConfig = true
     }
 
-
 }
 
 fun getBuildVersionName(): String {
@@ -90,7 +88,6 @@ private fun getCurrentDate(): String {
     val sdf = SimpleDateFormat("MMddHHmm", Locale.getDefault())
     return sdf.format(Date())
 }
-
 
 private fun getShortGitRevision(): String {
     val command = "git rev-parse --short HEAD"
@@ -158,12 +155,10 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.coil.compose)
 
-    // Media3
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.datasource)
     implementation(libs.androidx.media3.datasource.okhttp)
 
-    // 拖拽排序
     implementation(libs.reorderable)
     implementation(libs.gson)
 
@@ -175,6 +170,5 @@ dependencies {
 
     implementation(files("libs/lib-decoder-ffmpeg-release.aar"))
 
-    // 模糊
     implementation(libs.haze.jetpack.compose)
 }
