@@ -77,10 +77,6 @@ object GlobalDownloadManager {
             AudioDownloadManager.progressFlow.collect { progress ->
                 progress?.let { updateDownloadProgress(it) }
             }
-?: run {
-                    // 下载完成，更新任务状态
-                    updateCompletedTasks(context)
-                }
             }
         }
         
@@ -129,8 +125,6 @@ object GlobalDownloadManager {
         }
     }
     
-    private fun updateComp描本地文件，更新已下载歌曲列表
-     */
     fun scanLocalFiles(context: Context) {
         scope.launch {
             _isRefreshing.value = true
