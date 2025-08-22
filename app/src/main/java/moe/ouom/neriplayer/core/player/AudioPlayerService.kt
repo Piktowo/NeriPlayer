@@ -250,17 +250,8 @@ class AudioPlayerService : Service() {
             .setStyle(
                 androidx.media.app.NotificationCompat.MediaStyle()
                     .setMediaSession(mediaSession.sessionToken)
-                    .setShowActionsInCompactView(0, 1, 3)
+                    .setShowActionsInCompactView(0, 1, 2)
             )
-
-        builder.addAction(android.R.drawable.ic_media_previous, "上一首", prevIntent)
-
-        if (isPlaying) {
-            builder.addAction(android.R.drawable.ic_media_pause, "暂停", pauseIntent)
-        } else {
-            builder.addAction(android.R.drawable.ic_media_play, "播放", playIntent)
-        }
-
         val isFav = PlayerManager.playlistsFlow.value
             .firstOrNull { it.name == "我喜欢的音乐" }
             ?.songs?.any { it.id == song?.id } == true
@@ -282,8 +273,8 @@ class AudioPlayerService : Service() {
             if (isPlaying) "暂停" else "播放",
             if (isPlaying) pauseIntent else playIntent
         )
-        builder.addAction(favAction)
         builder.addAction(android.R.drawable.ic_media_next, "下一首", nextIntent)
+        builder.addAction(favAction)
 
         // 标题/副标题/封面
         builder.setContentTitle(song?.name ?: "NeriPlayer")

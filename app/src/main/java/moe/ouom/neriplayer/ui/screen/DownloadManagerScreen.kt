@@ -577,7 +577,8 @@ private fun DownloadedSongItem(
 @Composable
 private fun OngoingDownloadTasks(viewModel: moe.ouom.neriplayer.ui.viewmodel.DownloadManagerViewModel) {
     val tasks by viewModel.downloadTasks.collectAsState()
-    if (tasks.isEmpty()) return
+    val downloading = remember(tasks) { tasks.filter { it.status == moe.ouom.neriplayer.core.download.DownloadStatus.DOWNLOADING } }
+    if (downloading.isEmpty()) return
 
     Text(
         text = "进行中",
@@ -590,7 +591,7 @@ private fun OngoingDownloadTasks(viewModel: moe.ouom.neriplayer.ui.viewmodel.Dow
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
     ) {
-        tasks.forEach { task ->
+        downloading.forEach { task ->
             val p = task.progress
             val ratio = if (p != null && p.totalBytes > 0L) {
                 (p.bytesRead.toFloat() / p.totalBytes.toFloat()).coerceIn(0f, 1f)

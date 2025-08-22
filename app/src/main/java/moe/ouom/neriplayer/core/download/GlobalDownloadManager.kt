@@ -75,9 +75,9 @@ object GlobalDownloadManager {
     private fun observeDownloadProgress(context: Context) {
         scope.launch {
             AudioDownloadManager.progressFlow.collect { progress ->
-                progress?.let {
-                    updateDownloadProgress(it)
-                } ?: run {
+                progress?.let { updateDownloadProgress(it) }
+            }
+?: run {
                     // 下载完成，更新任务状态
                     updateCompletedTasks(context)
                 }
@@ -129,21 +129,7 @@ object GlobalDownloadManager {
         }
     }
     
-    private fun updateCompletedTasks(context: Context) {
-        _downloadTasks.value = _downloadTasks.value.map { task ->
-            if (task.status == DownloadStatus.DOWNLOADING) {
-                task.copy(status = DownloadStatus.COMPLETED)
-            } else {
-                task
-            }
-        }
-        
-        // 刷新本地文件列表
-        scanLocalFiles(context)
-    }
-    
-    /**
-     * 扫描本地文件，更新已下载歌曲列表
+    private fun updateComp描本地文件，更新已下载歌曲列表
      */
     fun scanLocalFiles(context: Context) {
         scope.launch {
@@ -352,7 +338,11 @@ object GlobalDownloadManager {
                 
                 // 调用实际的下载方法
                 AudioDownloadManager.downloadSong(context, song)
-                
+
+                updateTaskStatus(song.id, DownloadStatus.COMPLETED)
+                removeDownloadTask(song.id)
+                scanLocalFiles(context)
+
                 NPLogger.d("GlobalDownloadManager", "开始下载: ${song.name}")
             } catch (e: Exception) {
                 NPLogger.e("GlobalDownloadManager", "开始下载失败: ${e.message}")
@@ -377,7 +367,11 @@ object GlobalDownloadManager {
                 
                 // 调用批量下载方法
                 AudioDownloadManager.downloadPlaylist(context, songs)
-                
+
+                updateAllTasksStatus(DownloadStatus.COMPLETED)
+                _downloadTasks.value = emptyList()
+                scanLocalFiles(context)
+
                 NPLogger.d("GlobalDownloadManager", "开始批量下载: ${songs.size} 首歌曲")
             } catch (e: Exception) {
                 NPLogger.e("GlobalDownloadManager", "批量下载失败: ${e.message}")
