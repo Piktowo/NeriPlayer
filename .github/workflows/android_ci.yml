@@ -78,7 +78,7 @@ jobs:
           WORKDIR=$(mktemp -d)
           unzip -q -o "$ZIP_PATH" -d "$WORKDIR"
 
-          # 优先匹配 NeriPlayer-*.apk，若无则取最大的 .apk（避免 \n 造成 YAML 折行，改用 stat）
+          # 优先匹配 NeriPlayer-*.apk，若无则取最大的 .apk（使用 stat 避免 YAML 折行）
           APK=""
           APK=$(find "$WORKDIR" -type f -name 'NeriPlayer-*.apk' -exec stat -c '%s %n' {} + | sort -nr | head -n1 | cut -d' ' -f2- || true)
           if [ -z "$APK" ]; then
@@ -103,7 +103,7 @@ jobs:
             ${{ steps.fromzip.outputs.zip_path }}
             ${{ steps.fromzip.outputs.apk_path }}
 
-      - name: Telegram 通知（优先发 APK，失败就发 ZIP）
+      - name: Telegram 通知（Python 发送，失败回退 ZIP）
         if: steps.fromzip.outputs.apk_path != ''
         env:
           TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
@@ -116,26 +116,75 @@ jobs:
           BRANCH: ${{ github.ref_name }}
         run: |
           set -euo pipefail
-          COMMIT_MSG="${{ github.event.head_commit.message }}"
-          if [ -z "${COMMIT_MSG}" ]; then COMMIT_MSG="$(git log -1 --pretty=%s 2>/dev/null || echo '手动触发构建')"; fi
-          commit_url="https://github.com/${REPO}/commit/${SHA}"
-          nl=$'\n'
-          caption="✅ 构建成功${nl}📦 仓库: ${REPO}${nl}🌿 分支: ${BRANCH}${nl}👤 提交者: ${ACTOR}${nl}📝 提交信息: ${COMMIT_MSG}${nl}🔗 提交详情: ${commit_url}"
+          python3 - <<'PY'
+          import os, sys, json, pathlib, mimetypes, urllib.request
+          TOKEN = os.environ["TOKEN"]
+          CHAT_ID = os.environ["CHAT_ID"]
+          APK_PATH = os.environ["APK_PATH"]
+          ZIP_PATH = os.environ.get("ZIP_PATH","")
+          SHA = os.environ["SHA"]
+          REPO = os.environ["REPO"]
+          ACTOR = os.environ["ACTOR"]
+          BRANCH = os.environ["BRANCH"]
 
-          APK_NAME=$(basename "$APK_PATH")
-          set +e
-          curl -sS --fail-with-body -X POST "https://api.telegram.org/bot${TOKEN}/sendDocument"             -F chat_id="${CHAT_ID}"             -F "document=@-;filename=${APK_NAME};type=application/vnd.android.package-archive"             -F caption="${caption}" < "$APK_PATH"
-          rc=$?
-          set -e
-          if [ $rc -ne 0 ]; then
-            echo "发送 APK 失败，尝试发送 ZIP …"
-            if [ -n "$ZIP_PATH" ] && [ -f "$ZIP_PATH" ]; then
-              curl -sS --fail-with-body -X POST "https://api.telegram.org/bot${TOKEN}/sendDocument"                 -F chat_id="${CHAT_ID}"                 -F "document=@${ZIP_PATH};type=application/zip"                 -F caption="${caption}"
-            else
-              echo "没有可用的 ZIP，通知失败。" >&2
-              exit 1
-            fi
-          fi
+          commit_url = f"https://github.com/{REPO}/commit/{SHA}"
+          caption = ("✅ 构建成功\n"
+                     f"📦 仓库: {REPO}\n"
+                     f"🌿 分支: {BRANCH}\n"
+                     f"👤 提交者: {ACTOR}\n"
+                     f"🔗 提交详情: {commit_url}")
+
+          def send_file(path, field_name="document", filename=None, mimetype=None):
+            if not filename:
+              filename = os.path.basename(path)
+            if not mimetype:
+              mt, _ = mimetypes.guess_type(filename)
+              mimetype = mt or "application/octet-stream"
+            boundary = "---------------------------TG" + os.urandom(8).hex()
+            def part_headers(name, filename=None, ctype=None):
+              hdr = f'Content-Disposition: form-data; name="{name}"'
+              if filename:
+                hdr += f'; filename="{filename}"'
+              hdr += "\r\n"
+              if ctype:
+                hdr += f"Content-Type: {ctype}\r\n"
+              return hdr + "\r\n"
+            with open(path, "rb") as f:
+              file_data = f.read()
+            body = []
+            body.append(f"--{boundary}\r\n".encode())
+            body.append(part_headers("chat_id").encode())
+            body.append(str(CHAT_ID).encode() + b"\r\n")
+            body.append(f"--{boundary}\r\n".encode())
+            body.append(part_headers("caption").encode())
+            body.append(caption.encode() + b"\r\n")
+            body.append(f"--{boundary}\r\n".encode())
+            body.append(part_headers(field_name, filename, mimetype).encode())
+            body.append(file_data)
+            body.append(b"\r\n")
+            body.append(f"--{boundary}--\r\n".encode())
+            data = b"".join(body)
+            url = f"https://api.telegram.org/bot{TOKEN}/sendDocument"
+            req = urllib.request.Request(url, data=data, method="POST")
+            req.add_header("Content-Type", f"multipart/form-data; boundary={boundary}")
+            req.add_header("Content-Length", str(len(data)))
+            try:
+              with urllib.request.urlopen(req, timeout=120) as resp:
+                resp_body = resp.read()
+                print("Telegram OK:", resp.status, len(resp_body))
+                return True
+            except Exception as e:
+              print("Telegram error:", e, file=sys.stderr)
+              return False
+
+          if not send_file(APK_PATH, filename=os.path.basename(APK_PATH), mimetype="application/vnd.android.package-archive"):
+            if ZIP_PATH and os.path.exists(ZIP_PATH):
+              ok = send_file(ZIP_PATH, filename=os.path.basename(ZIP_PATH), mimetype="application/zip")
+              if not ok:
+                sys.exit(1)
+            else:
+              sys.exit(1)
+          PY
 
       - name: Telegram 通知失败
         if: failure()
