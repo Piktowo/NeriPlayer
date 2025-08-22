@@ -3,15 +3,16 @@ package moe.ouom.neriplayer.ui.viewmodel
 import android.app.Application
 import android.content.Context
 import androidx.lifecycle.AndroidViewModel
+import kotlinx.coroutines.flow.StateFlow
 import moe.ouom.neriplayer.core.download.GlobalDownloadManager
 import moe.ouom.neriplayer.core.download.DownloadedSong
 import moe.ouom.neriplayer.ui.viewmodel.playlist.SongItem
 
 class DownloadManagerViewModel(application: Application) : AndroidViewModel(application) {
 
-    val downloadedSongs = GlobalDownloadManager.downloadedSongs
-    val isRefreshing = GlobalDownloadManager.isRefreshing
-    val downloadTasks = GlobalDownloadManager.downloadTasks
+    val downloadedSongs: StateFlow<List<DownloadedSong>> = GlobalDownloadManager.downloadedSongs
+    val isRefreshing: StateFlow<Boolean> = GlobalDownloadManager.isRefreshing
+    val downloadTasks: StateFlow<List<GlobalDownloadManager.DownloadTask>> = GlobalDownloadManager.downloadTasks
 
     fun refreshDownloadedSongs() {
         val appContext = getApplication<Application>()
@@ -27,9 +28,17 @@ class DownloadManagerViewModel(application: Application) : AndroidViewModel(appl
         GlobalDownloadManager.playDownloadedSong(context, song)
     }
 
-    fun startBatchDownload(context: Context, songs: List<SongItem>) {
-        GlobalDownloadManager.startBatchDownload(context, songs) {
-
-        }
+    fun startBatchDownload(
+        context: Context,
+        songs: List<SongItem>, 
+        onError: ((String) -> Unit)? = null,
+        onBatchComplete: () -> Unit = {}
+    ) {
+        GlobalDownloadManager.startBatchDownload(
+            context = context,
+            songs = songs,
+            onError = onError,
+            onBatchComplete = onBatchComplete
+        )
     }
 }
