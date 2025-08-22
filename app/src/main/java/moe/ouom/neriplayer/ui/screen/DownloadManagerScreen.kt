@@ -34,6 +34,7 @@ import moe.ouom.neriplayer.ui.viewmodel.DownloadManagerViewModel
 import moe.ouom.neriplayer.util.formatDate
 import moe.ouom.neriplayer.util.formatFileSize
 import moe.ouom.neriplayer.util.performHapticFeedback
+import moe.ouom.neriplayer.core.download.DownloadStatus
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -563,8 +564,8 @@ private fun DownloadedSongItem(
 
 @Composable
 private fun OngoingDownloadTasks(viewModel: moe.ouom.neriplayer.ui.viewmodel.DownloadManagerViewModel) {
-    val tasks by viewModel.downloadTasks.collectAsState()
-    val downloading = remember(tasks) { tasks.filter { it.status == moe.ouom.neriplayer.core.download.DownloadStatus.DOWNLOADING } }
+    val tasks by viewModel.downloadTasks.collectAsState(initial = emptyList())
+    val downloading = remember(tasks) { tasks.filter { it.status == DownloadStatus.DOWNLOADING } }
     if (downloading.isEmpty()) return
 
     Text(
@@ -579,17 +580,14 @@ private fun OngoingDownloadTasks(viewModel: moe.ouom.neriplayer.ui.viewmodel.Dow
             .padding(horizontal = 16.dp)
     ) {
         downloading.forEach { task ->
-            val p = task.progress
-            val ratio = if (p != null && p.totalBytes > 0L) {
-                (p.bytesRead.toFloat() / p.totalBytes.toFloat()).coerceIn(0f, 1f)
-            } else null
-
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 6.dp),
                 shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                )
             ) {
                 Column(Modifier.padding(12.dp)) {
                     Text(
@@ -599,13 +597,24 @@ private fun OngoingDownloadTasks(viewModel: moe.ouom.neriplayer.ui.viewmodel.Dow
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Spacer(Modifier.height(8.dp))
-                    if (ratio != null) {
-                        LinearProgressIndicator(progress = ratio, modifier = Modifier.fillMaxWidth())
+
+                    val p = task.progress
+                    if (p != null) {
+                        val percentInt = run {
+                            val total = if (p.totalBytes > 0L) p.totalBytes else 1L
+                            ((p.bytesRead * 100.0) / total).toInt().coerceIn(0, 100)
+                        }
+                        LinearProgressIndicator(
+                            progress = percentInt / 100f,
+                            modifier = Modifier.fillMaxWidth()
+                        )
                         Spacer(Modifier.height(4.dp))
-                        val percent = (ratio * 100).toInt()
-                        val read = formatSize(task.progress!!.bytesRead)
-                        val total = formatSize(task.progress!!.totalBytes)
-                        Text("$percent%  ·  $read / $total", style = MaterialTheme.typography.bodySmall)
+                        val read = formatSize(p.bytesRead)
+                        val total = formatSize(p.totalBytes)
+                        Text(
+                            "$percentInt%  ·  $read / $total",
+                            style = MaterialTheme.typography.bodySmall
+                        )
                     } else {
                         LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                         Spacer(Modifier.height(4.dp))
@@ -615,8 +624,6 @@ private fun OngoingDownloadTasks(viewModel: moe.ouom.neriplayer.ui.viewmodel.Dow
             }
         }
     }
-
-    Spacer(Modifier.height(12.dp))
 }
 
 private fun formatSize(bytes: Long): String {
